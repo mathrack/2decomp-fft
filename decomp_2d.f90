@@ -312,6 +312,14 @@ contains
        DECOMP_2D_COMM = MPI_COMM_WORLD
     endif
 
+    !
+    ! Get global rank and comm size
+    !
+    call MPI_COMM_RANK(DECOMP_2D_COMM, nrank, ierror)
+    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_RANK")
+    call MPI_COMM_SIZE(DECOMP_2D_COMM, nproc, ierror)
+    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_SIZE")
+
     nx_global = nx
     ny_global = ny
     nz_global = nz
