@@ -237,6 +237,10 @@ module decomp_2d
 
   interface
 
+     module function d2d_get_iounit() result(iounit)
+        integer :: iounit
+     end function d2d_get_iounit
+
      module subroutine d2d_listing(given_io_unit)
         integer, intent(in), optional :: given_io_unit
      end subroutine d2d_listing
@@ -271,10 +275,7 @@ contains
     logical, dimension(3), intent(IN), optional :: periodic_bc
     integer, intent(in), optional :: glob_comm, local_comm
 
-    integer :: errorcode, ierror, row, col, iounit
-#ifdef DEBUG
-    character(len=3) fname
-#endif
+    integer :: errorcode, ierror, row, col
 
     if (present(glob_comm)) then
        DECOMP_2D_COMM = glob_comm
@@ -287,9 +288,14 @@ contains
        DECOMP_2D_LOCALCOMM = local_comm
        ! Only local masters will perform MPI operations
        if (DECOMP_2D_COMM == MPI_COMM_NULL) then
+          ! Intra-node CPU map
           call decomp_2d_map_local()
+          ! Initialize the main decomp_info object
           call decomp_info_init(nx, ny, nz, decomp_main)
+          ! Receive some decomp_2d stuff from local master
           call decomp_2d_init_local()
+          ! Print decomp_2d setup
+          call d2d_listing(d2d_get_iounit())
           return
        endif
     else
@@ -439,35 +445,13 @@ contains
 #endif
 #endif
 
-    ! If MPI3 shared memory
+    ! If MPI3 shared memory, local master should broadcast some decomp_2d stuff
     if (DECOMP_2D_COMM /= MPI_COMM_WORLD) call decomp_2d_init_local()
 
     !
-    ! Select the IO unit for decomp_2d setup
+    ! Print decomp_2d setup
     !
-#ifdef DEBUG
-    write(fname, "(I3.3)") nrank
-    open(newunit=iounit, file='decomp_2d_setup_'//trim(fname)//'.log', iostat=ierror)
-#else
-    if (nrank == 0) then
-       open(newunit=iounit, file="decomp_2d_setup.log", iostat=ierror)
-    else
-       iounit = output_unit
-       ierror = 0
-    endif
-#endif
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "Could not open log file")
-    !
-    ! Print the decomp_2d setup
-    !
-    call d2d_listing(iounit)
-    !
-    ! Close the IO unit if it was not stdout
-    !
-    if (iounit /= output_unit) then
-       close(iounit, iostat=ierror)
-       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "Could not close log file")
-    endif
+    call d2d_listing(d2d_get_iounit())
 
     return
   end subroutine decomp_2d_init

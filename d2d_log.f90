@@ -17,6 +17,35 @@ submodule (decomp_2d) d2d_log
   contains
 
   !
+  ! Generate a IO unit for the decomp_2d listing
+  !
+  module function d2d_get_iounit() result(iounit)
+
+     implicit none
+
+     integer :: iounit
+     integer :: ierror
+     character(10) :: fname
+
+#ifdef DEBUG
+    if (nrank_loc >= 0) then
+       write(fname, "(I3.3,'_',I3.3)") nrank, nrank_loc
+    else
+       write(fname, "(I3.3)") nrank
+    endif
+    open(newunit=iounit, file='decomp_2d_setup_'//trim(fname)//'.log', iostat=ierror)
+#else
+    if (nrank == 0) then
+       open(newunit=iounit, file="decomp_2d_setup.log", iostat=ierror)
+    else
+       iounit = output_unit
+       ierror = 0
+    endif
+#endif
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "Could not open log file")
+
+  end function d2d_get_iounit
+  !
   ! Print some information about decomp_2d
   !
   module subroutine d2d_listing(given_io_unit)
@@ -29,15 +58,15 @@ submodule (decomp_2d) d2d_log
     integer, intent(in), optional :: given_io_unit
 
     ! Local variable
-    integer :: io_unit
+    integer :: io_unit, ierror
 
     !
-    ! Default : only rank 0 will print a listing
+    ! Default : only rank 0 (or local master on node 0) will print a listing
     !
     ! In DEBUG mode, all ranks will print a listing
     !
 #ifndef DEBUG
-    if (nrank /= 0) return
+    if (nrank /= 0 .or. nrank_loc > 0) return
 #endif
 
     ! If no IO unit provided, use stdout
@@ -62,8 +91,10 @@ submodule (decomp_2d) d2d_log
     ! Basic info
 #ifdef DEBUG
     write (io_unit, *) 'I am mpi rank ', nrank
+    write (io_unit, *) 'Local rank on the node ', nrank_loc
 #endif
     write (io_unit, *) 'Total ranks ', nproc
+    write (io_unit, *) 'Total ranks inside the node ', nproc_loc
     write (io_unit, *) 'Global data size : ', nx_global, ny_global, nz_global
     write (io_unit, *) 'p_row, p_col : ', dims(1), dims(2)
     write (io_unit, *) 'Periodicity : ', periodic_x, periodic_y, periodic_z
@@ -115,6 +146,12 @@ submodule (decomp_2d) d2d_log
     call decomp_info_print(ph4, io_unit, "ph4")
     write (io_unit, *) '==========================================================='
     write (io_unit, *) '==========================================================='
+
+    ! Close the unit if needed
+    if (io_unit /= output_unit) then
+       close(io_unit, iostat=ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "Could not close log file")
+    endif
 
   end subroutine d2d_listing
 
