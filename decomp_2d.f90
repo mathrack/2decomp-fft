@@ -59,6 +59,7 @@ module decomp_2d
   ! parameters for 2D Cartesian topology 
   integer, save, dimension(2) :: dims, coord
   logical, save, dimension(2) :: periodic
+  integer, save, public :: DECOMP_2D_COMM
   integer, save, public :: DECOMP_2D_COMM_CART_X, &
        DECOMP_2D_COMM_CART_Y, DECOMP_2D_COMM_CART_Z 
   integer, save :: DECOMP_2D_COMM_ROW, DECOMP_2D_COMM_COL
@@ -289,7 +290,7 @@ contains
   !     all internal data structures initialised properly
   !     library ready to use
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine decomp_2d_init(nx,ny,nz,p_row,p_col,periodic_bc)
+  subroutine decomp_2d_init(nx,ny,nz,p_row,p_col,periodic_bc,glob_comm)
 
     use iso_fortran_env, only : output_unit
 
@@ -298,11 +299,18 @@ contains
     integer, intent(IN) :: nx,ny,nz
     integer, intent(INOUT) :: p_row,p_col
     logical, dimension(3), intent(IN), optional :: periodic_bc
+    integer, intent(in), optional :: glob_comm
 
     integer :: errorcode, ierror, row, col, iounit
 #ifdef DEBUG
     character(len=3) fname
 #endif
+
+    if (present(glob_comm)) then
+       DECOMP_2D_COMM = glob_comm
+    else
+       DECOMP_2D_COMM = MPI_COMM_WORLD
+    endif
 
     nx_global = nx
     ny_global = ny
@@ -344,18 +352,18 @@ contains
     dims(2) = col
     periodic(1) = periodic_y
     periodic(2) = periodic_z
-    call MPI_CART_CREATE(MPI_COMM_WORLD,2,dims,periodic, &
+    call MPI_CART_CREATE(DECOMP_2D_COMM,2,dims,periodic, &
          .false., &  ! do not reorder rank
          DECOMP_2D_COMM_CART_X, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_CREATE")
     periodic(1) = periodic_x
     periodic(2) = periodic_z
-    call MPI_CART_CREATE(MPI_COMM_WORLD,2,dims,periodic, &
+    call MPI_CART_CREATE(DECOMP_2D_COMM,2,dims,periodic, &
          .false., DECOMP_2D_COMM_CART_Y, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_CREATE")
     periodic(1) = periodic_x
     periodic(2) = periodic_y
-    call MPI_CART_CREATE(MPI_COMM_WORLD,2,dims,periodic, &
+    call MPI_CART_CREATE(DECOMP_2D_COMM,2,dims,periodic, &
          .false., DECOMP_2D_COMM_CART_Z, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_CREATE")
 
@@ -425,7 +433,7 @@ contains
     if (nrank .eq. 0) then
        nccl_stat = ncclGetUniqueId(nccl_uid_2decomp)
     end if
-    call MPI_Bcast(nccl_uid_2decomp, int(sizeof(ncclUniqueId)), MPI_BYTE, 0, MPI_COMM_WORLD, ierror)
+    call MPI_Bcast(nccl_uid_2decomp, int(sizeof(ncclUniqueId)), MPI_BYTE, 0, DECOMP_2D_COMM, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
 
     nccl_stat = ncclCommInitRank(nccl_comm_2decomp, nproc, nccl_uid_2decomp, nrank)
@@ -1491,7 +1499,7 @@ contains
 
     ! maxcor
     call MPI_ALLREDUCE(ncores, maxcor, 1, MPI_INTEGER, MPI_MAX, &
-         MPI_COMM_WORLD, ierror)
+         DECOMP_2D_COMM, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLREDUCE")
 
     call FIPC_finalize(ierror)
@@ -1752,7 +1760,7 @@ contains
        write(error_unit,*) '2DECOMP&FFT ERROR - errorcode: ', errorcode
        write(error_unit,*) 'ERROR MESSAGE: ' // msg
     end if
-    call MPI_ABORT(MPI_COMM_WORLD,errorcode,ierror)
+    call MPI_ABORT(DECOMP_2D_COMM,errorcode,ierror)
 
   end subroutine decomp_2d_abort_basic
 
@@ -1779,7 +1787,7 @@ contains
        write(error_unit,*) '           line  ', line
        write(error_unit,*) '  error message: ' // msg
     end if
-    call MPI_ABORT(MPI_COMM_WORLD,errorcode,ierror)
+    call MPI_ABORT(DECOMP_2D_COMM,errorcode,ierror)
 
   end subroutine decomp_2d_abort_file_line
 
