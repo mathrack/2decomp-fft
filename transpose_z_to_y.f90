@@ -41,12 +41,12 @@
        decomp = decomp_main
     end if
 
-    s1 = SIZE(src,1)
-    s2 = SIZE(src,2)
-    s3 = SIZE(src,3)
-    d1 = SIZE(dst,1)
-    d2 = SIZE(dst,2)
-    d3 = SIZE(dst,3)
+    s1 = decomp%zsz(1)
+    s2 = decomp%zsz(2)
+    s3 = decomp%zsz(3)
+    d1 = decomp%ysz(1)
+    d2 = decomp%ysz(2)
+    d3 = decomp%ysz(3)
 
     ! rearrange source array as send buffer
 #ifdef SHM
@@ -173,12 +173,12 @@
        decomp = decomp_main
     end if
 
-    s1 = SIZE(src,1)
-    s2 = SIZE(src,2)
-    s3 = SIZE(src,3)
-    d1 = SIZE(dst,1)
-    d2 = SIZE(dst,2)
-    d3 = SIZE(dst,3)
+    s1 = decomp%zsz(1)
+    s2 = decomp%zsz(2)
+    s3 = decomp%zsz(3)
+    d1 = decomp%ysz(1)
+    d2 = decomp%ysz(2)
+    d3 = decomp%ysz(3)
     
     ! rearrange source array as send buffer
 #ifdef SHM
