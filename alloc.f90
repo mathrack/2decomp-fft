@@ -54,11 +54,11 @@
        end if
        if (present(var2d)) nullify(var2d)
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
@@ -134,11 +134,11 @@
        end if
        if (present(var2d)) nullify(var2d)
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
@@ -213,11 +213,11 @@
                stat=alloc_stat)
        end if
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
@@ -292,11 +292,11 @@
                stat=alloc_stat)
        end if
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
@@ -371,11 +371,11 @@
                stat=alloc_stat)
        end if
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
@@ -450,11 +450,11 @@
                stat=alloc_stat)
        end if
     else
-       ! MPI3 shared memory
+       ! MPI3 shared memory, the caller should free the MPI window
        !
        ! Safety check
-       if (.not.present(win) .or. .not.present(var2d)) then
-          call decomp_2d_abort(__FILE__, __LINE__, 0, "Not enough argument provided")
+       if (.not.present(win) .or. .not.present(var2d) .or. global) then
+          call decomp_2d_abort(__FILE__, __LINE__, 0, "Allocation is not possible")
        endif
        alloc_stat = 0
        !
