@@ -290,8 +290,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+             do i=1,n2
+                out(pos) = in(j,i,k)
                 pos = pos + 1
              end do
           end do
@@ -344,8 +344,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+             do i=1,n2
+                out(pos) = in(j,i,k)
                 pos = pos + 1
              end do
           end do

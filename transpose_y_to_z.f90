@@ -81,17 +81,10 @@
     end if
 #else
 #ifdef EVEN
-    if (decomp%even) then
-       call MPI_ALLTOALL(work1_r, decomp%y2count, &
-            real_type, dst, decomp%z2count, &
-            real_type, DECOMP_2D_COMM_ROW, ierror)
-       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-    else
-       call MPI_ALLTOALL(work1_r, decomp%y2count, &
-            real_type, work2_r, decomp%z2count, &
-            real_type, DECOMP_2D_COMM_ROW, ierror)
-       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
-    end if
+    call MPI_ALLTOALL(work1_r, decomp%y2count, &
+         real_type, work2_r, decomp%z2count, &
+         real_type, DECOMP_2D_COMM_ROW, ierror)
+    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
 #else
 
 #if defined(_GPU)
@@ -111,7 +104,7 @@
 #endif
 #else
     call MPI_ALLTOALLV(work1_r, decomp%y2cnts, decomp%y2disp, &
-         real_type, dst, decomp%z2cnts, decomp%z2disp, &
+         real_type, work2_r, decomp%z2cnts, decomp%z2disp, &
          real_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
 #endif
@@ -126,20 +119,14 @@
     call mem_merge_yz_real(work2, d1, d2, d3, dst, dims(2), &
          decomp%z2dist, decomp)
 #else
-#ifdef EVEN
-    if (.not. decomp%even) then
-       call mem_merge_yz_real(work2_r, d1, d2, d3, dst, dims(2), &
-         decomp%z2dist, decomp)
-    end if
-#else
-    ! note the receive buffer is already in natural (i,j,k) order
-    ! so no merge operation needed
 
 #if defined(_GPU)
     istat = cudaMemcpy( dst, work2_r_d, d1*d2*d3, cudaMemcpyDeviceToDevice )
+#else
+    call mem_merge_yz_real(work2_r, d1, d2, d3, dst, dims(2), &                                   
+      decomp%z2dist, decomp)
 #endif
 
-#endif
 #endif
     
     return
@@ -216,15 +203,9 @@
     end if
 #else
 #ifdef EVEN
-    if (decomp%even) then
-       call MPI_ALLTOALL(work1_c, decomp%y2count, &
-            complex_type, dst, decomp%z2count, &
-            complex_type, DECOMP_2D_COMM_ROW, ierror)
-    else
-       call MPI_ALLTOALL(work1_c, decomp%y2count, &
-            complex_type, work2_c, decomp%z2count, &
-            complex_type, DECOMP_2D_COMM_ROW, ierror)
-    end if
+    call MPI_ALLTOALL(work1_c, decomp%y2count, &
+         complex_type, work2_c, decomp%z2count, &
+         complex_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
 #else
 
@@ -235,7 +216,7 @@
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
 #else
     call MPI_ALLTOALLV(work1_c, decomp%y2cnts, decomp%y2disp, &
-         complex_type, dst, decomp%z2cnts, decomp%z2disp, &
+         complex_type, work2_c, decomp%z2cnts, decomp%z2disp, &
          complex_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
 #endif
@@ -250,20 +231,14 @@
     call mem_merge_yz_complex(work2, d1, d2, d3, dst, dims(2), &
          decomp%z2dist, decomp)
 #else
-#ifdef EVEN
-    if (.not. decomp%even) then
-       call mem_merge_yz_complex(work2_c, d1, d2, d3, dst, dims(2), &
-         decomp%z2dist, decomp)
-    end if
-#else
-    ! note the receive buffer is already in natural (i,j,k) order
-    ! so no merge operation needed
 
 #if defined(_GPU)
     istat = cudaMemcpy( dst, work2_c_d, d1*d2*d3, cudaMemcpyDeviceToDevice )
+#else
+    call mem_merge_yz_complex(work2_c, d1, d2, d3, dst, dims(2), &
+      decomp%z2dist, decomp)
 #endif
 
-#endif
 #endif
 
     return
@@ -310,8 +285,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+             do i=1,n2
+                out(pos) = in(j,i,k)
                 pos = pos + 1
              end do
           end do
@@ -364,8 +339,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+             do i=1,n2
+                out(pos) = in(j,i,k)
                 pos = pos + 1
              end do
           end do
@@ -410,9 +385,9 @@
 #endif
 
        do k=i1,i2
-          do j=1,n2
-             do i=1,n1
-                out(i,j,k) = in(pos)
+          do j=1,n3
+             do i=1,n2
+                out(k,i,j) = in(pos)
                 pos = pos + 1
              end do
           end do
@@ -456,9 +431,9 @@
 #endif
 
        do k=i1,i2
-          do j=1,n2
-             do i=1,n1
-                out(i,j,k) = in(pos)
+          do j=1,n3
+             do i=1,n2
+                out(k,i,j) = in(pos)
                 pos = pos + 1
              end do
           end do

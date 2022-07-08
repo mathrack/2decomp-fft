@@ -471,6 +471,44 @@ contains
     return
   end subroutine decomp_2d_init
 
+  !
+  ! Reshape Y and Z pencils so that the leading dimension is the working one
+  !
+  subroutine decomp_info_init_reshapeyz(decomp)
+
+     implicit none
+
+     type(decomp_info), intent(inout) :: decomp
+
+     call d2d_swap(decomp%yst, 1, 2)
+     call d2d_swap(decomp%yen, 1, 2)
+     call d2d_swap(decomp%ysz, 1, 2)
+
+     ! reshape z-pencil like x-pencil
+     call d2d_swap(decomp%zst, 2, 3)
+     call d2d_swap(decomp%zst, 1, 2)
+     call d2d_swap(decomp%zen, 2, 3)
+     call d2d_swap(decomp%zen, 1, 2)
+     call d2d_swap(decomp%zsz, 2, 3)
+     call d2d_swap(decomp%zsz, 1, 2)
+
+  end subroutine decomp_info_init_reshapeyz
+  !
+  ! Swap integers
+  !
+  subroutine d2d_swap(array, i, j)
+
+     implicit none
+
+     integer, intent(inout) :: array(3)
+     integer, intent(in) :: i, j
+     integer :: tmp
+
+     tmp = array(i)
+     array(i) = array(j)
+     array(j) = tmp
+
+  end subroutine d2d_swap
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Routine to be called by applications to clean things up
@@ -656,6 +694,9 @@ contains
                'Out of memory when allocating 2DECOMP workspace')
        end if
     end if
+
+    ! Reshape Y and Z pencils
+    call decomp_info_init_reshapeyz(decomp)
 
     return
   end subroutine decomp_info_init

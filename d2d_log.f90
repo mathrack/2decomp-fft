@@ -151,7 +151,7 @@ submodule (decomp_2d) d2d_log
     ! Otherwise, print only global size
     !
     write (io_unit, *) 'Decomp_info : ', d2dname
-    write (io_unit, *) '   Global size : ', d2d%xsz(1), d2d%ysz(2), d2d%zsz(3)
+    write (io_unit, *) '   Global size : ', d2d%xsz(1), d2d%ysz(1), d2d%zsz(1)
 #ifdef DEBUG
     write (io_unit, *) '   xsz, xst, xen : ', d2d%xsz, d2d%xst, d2d%xen
     write (io_unit, *) '   ysz, yst, yen : ', d2d%ysz, d2d%yst, d2d%yen

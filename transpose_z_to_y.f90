@@ -54,20 +54,14 @@
     call mem_split_zy_real(src, s1, s2, s3, work1, dims(2), &
          decomp%z2dist, decomp)
 #else
-#ifdef EVEN
-    if (.not. decomp%even) then
-       call mem_split_zy_real(src, s1, s2, s3, work1_r, dims(2), &
-            decomp%z2dist, decomp)
-    end if
-#else
-    ! note the src array is suitable to be a send buffer
-    ! so no split operation needed
 
 #if defined(GPU)
     istat = cudaMemcpy( work1_r_d, src, s1*s2*s3 )
+#else
+    call mem_split_zy_real(src, s1, s2, s3, work1_r, dims(2), &
+         decomp%z2dist, decomp)
 #endif
 
-#endif
 #endif
     
     ! define receive buffer
@@ -86,15 +80,9 @@
     end if
 #else
 #ifdef EVEN
-    if (decomp%even) then
-       call MPI_ALLTOALL(src, decomp%z2count, &
-            real_type, work2_r, decomp%y2count, &
-            real_type, DECOMP_2D_COMM_ROW, ierror)
-    else
-       call MPI_ALLTOALL(work1_r, decomp%z2count, &
-            real_type, work2_r, decomp%y2count, &
-            real_type, DECOMP_2D_COMM_ROW, ierror)
-    end if
+    call MPI_ALLTOALL(work1_r, decomp%z2count, &
+         real_type, work2_r, decomp%y2count, &
+         real_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
 #else
 
@@ -114,7 +102,7 @@
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
 #endif
 #else
-    call MPI_ALLTOALLV(src, decomp%z2cnts, decomp%z2disp, &
+    call MPI_ALLTOALLV(work1_r, decomp%z2cnts, decomp%z2disp, &
          real_type, work2_r, decomp%y2cnts, decomp%y2disp, &
          real_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
@@ -186,20 +174,14 @@
     call mem_split_zy_complex(src, s1, s2, s3, work1, dims(2), &
          decomp%z2dist, decomp)
 #else
-#ifdef EVEN
-    if (.not. decomp%even) then
-       call mem_split_zy_complex(src, s1, s2, s3, work1_c, dims(2), &
-            decomp%z2dist, decomp)
-    end if
-#else
-    ! note the src array is suitable to be a send buffer
-    ! so no split operation needed
 
 #if defined(GPU)
     istat = cudaMemcpy( work1_c_d, src, s1*s2*s3 )
+#else
+    call mem_split_zy_complex(src, s1, s2, s3, work1_c, dims(2), &
+         decomp%z2dist, decomp)
 #endif
 
-#endif
 #endif
     
     ! define receive buffer
@@ -218,15 +200,9 @@
     end if
 #else
 #ifdef EVEN
-    if (decomp%even) then
-       call MPI_ALLTOALL(src, decomp%z2count, &
-            complex_type, work2_c, decomp%y2count, &
-            complex_type, DECOMP_2D_COMM_ROW, ierror)
-    else
-       call MPI_ALLTOALL(work1_c, decomp%z2count, &
-            complex_type, work2_c, decomp%y2count, &
-            complex_type, DECOMP_2D_COMM_ROW, ierror)
-    end if
+    call MPI_ALLTOALL(work1_c, decomp%z2count, &
+         complex_type, work2_c, decomp%y2count, &
+         complex_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
 #else
 
@@ -236,7 +212,7 @@
          complex_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
 #else
-    call MPI_ALLTOALLV(src, decomp%z2cnts, decomp%z2disp, &
+    call MPI_ALLTOALLV(work1_c, decomp%z2cnts, decomp%z2disp, &
          complex_type, work2_c, decomp%y2cnts, decomp%y2disp, &
          complex_type, DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
@@ -303,9 +279,9 @@
 #endif
 
        do k=i1,i2
-          do j=1,n2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+          do j=1,n3
+             do i=1,n2
+                out(pos) = in(k,i,j)
                 pos = pos + 1
              end do
           end do
@@ -349,9 +325,9 @@
 #endif
 
        do k=i1,i2
-          do j=1,n2
-             do i=1,n1
-                out(pos) = in(i,j,k)
+          do j=1,n3
+             do i=1,n2
+                out(pos) = in(k,i,j)
                 pos = pos + 1
              end do
           end do
@@ -403,8 +379,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(i,j,k) = in(pos)
+             do i=1,n2
+                out(j,i,k) = in(pos)
                 pos = pos + 1
              end do
           end do
@@ -458,8 +434,8 @@
 #else
        do k=1,n3
           do j=i1,i2
-             do i=1,n1
-                out(i,j,k) = in(pos)
+             do i=1,n2
+                out(j,i,k) = in(pos)
                 pos = pos + 1
              end do
           end do
