@@ -35,8 +35,8 @@ TYPE(DECOMP_INFO), save :: sp  ! spectral space
 
 ! Workspace to store the intermediate Y-pencil data
 ! *** TODO: investigate how to use only one workspace array
-complex(mytype), allocatable, dimension(:,:,:) :: wk2_c2c, wk2_r2c
-complex(mytype), allocatable, dimension(:,:,:) :: wk13
+complex(mytype), pointer, dimension(:,:,:) :: wk2_c2c, wk2_r2c
+complex(mytype), pointer, dimension(:,:,:) :: wk13
 
 public :: decomp_2d_fft_init, decomp_2d_fft_3d, &
 decomp_2d_fft_finalize, decomp_2d_fft_get_size
@@ -154,9 +154,9 @@ implicit none
 call decomp_info_finalize(ph)
 call decomp_info_finalize(sp)
 
-if (allocated(wk2_c2c)) deallocate(wk2_c2c)
-if (allocated(wk2_r2c)) deallocate(wk2_r2c)
-if (allocated(wk13)) deallocate(wk13)
+if (associated(wk2_c2c)) nullify(wk2_c2c)
+if (associated(wk2_r2c)) nullify(wk2_r2c)
+if (associated(wk13)) nullify(wk13)
 
 call finalize_fft_engine
 

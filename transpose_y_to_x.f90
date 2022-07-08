@@ -15,8 +15,8 @@
 
     implicit none
     
-    real(mytype), dimension(:,:,:), intent(IN) :: src
-    real(mytype), dimension(:,:,:), intent(OUT) :: dst
+    real(mytype), dimension(:,:,:), pointer, intent(IN) :: src
+    real(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
 
     TYPE(DECOMP_INFO) :: decomp
@@ -34,6 +34,9 @@
     
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
+
+    ! In case of MPI3 shared memory and proc is not local master                                     
+    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
 
     if (present(opt_decomp)) then
        decomp = opt_decomp
@@ -139,8 +142,8 @@
 
     implicit none
     
-    complex(mytype), dimension(:,:,:), intent(IN) :: src
-    complex(mytype), dimension(:,:,:), intent(OUT) :: dst
+    complex(mytype), dimension(:,:,:), pointer, intent(IN) :: src
+    complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
 
     TYPE(DECOMP_INFO) :: decomp
@@ -158,6 +161,9 @@
     
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
+
+    ! In case of MPI3 shared memory and proc is not local master                                     
+    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
 
     if (present(opt_decomp)) then
        decomp = opt_decomp

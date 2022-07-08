@@ -19,14 +19,14 @@ subroutine fft_3d_c2c(in, out, isign)
 
 implicit none
 
-complex(mytype), dimension(:,:,:), intent(INOUT) :: in
-complex(mytype), dimension(:,:,:), intent(OUT) :: out
+complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in
+complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: out
 integer, intent(IN) :: isign
 
 integer :: i, j, k
 
 #ifndef OVERWRITE
-complex(mytype), allocatable, dimension(:,:,:) :: wk1
+complex(mytype), pointer, dimension(:,:,:) :: wk1
 #endif
 
 if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_FORWARD .OR.  &
@@ -114,7 +114,7 @@ end if
 
 #ifndef OVERWRITE
 ! Free memory
-if (allocated(wk1)) deallocate(wk1)
+if (associated(wk1)) nullify(wk1)
 #endif
 
 return
@@ -128,8 +128,8 @@ subroutine fft_3d_r2c(in_r, out_c)
 
 implicit none
 
-real(mytype), dimension(:,:,:), intent(IN) :: in_r
-complex(mytype), dimension(:,:,:), intent(OUT) :: out_c
+real(mytype), dimension(:,:,:), pointer, intent(IN) :: in_r
+complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: out_c
 
 if (format==PHYSICAL_IN_X) then
 
@@ -185,13 +185,13 @@ subroutine fft_3d_c2r(in_c, out_r)
 
 implicit none
 
-complex(mytype), dimension(:,:,:), intent(INOUT) :: in_c
-real(mytype), dimension(:,:,:), intent(OUT) :: out_r
+complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in_c
+real(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out_r
 
 integer :: i, j, k
 
 #ifndef OVERWRITE
-complex(mytype), allocatable, dimension(:,:,:) :: wk1
+complex(mytype), pointer, dimension(:,:,:) :: wk1
 #endif
 
 if (format==PHYSICAL_IN_X) then
@@ -268,7 +268,7 @@ end if
 
 #ifndef OVERWRITE
 ! Free memory
-if (allocated(wk1)) deallocate(wk1)
+if (associated(wk1)) nullify(wk1)
 #endif
 
 return

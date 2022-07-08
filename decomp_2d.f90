@@ -16,6 +16,7 @@ module decomp_2d
 
   use MPI
   use, intrinsic :: iso_fortran_env, only : real32, real64
+  use, intrinsic :: iso_c_binding, only : c_ptr, c_f_pointer
 #if defined(_GPU)
   use cudafor
 #if defined(_NCCL)
@@ -55,11 +56,13 @@ module decomp_2d
 
   integer, save, public :: nrank  ! local MPI rank 
   integer, save, public :: nproc  ! total number of processors
+  integer, save, public :: nrank_loc ! intranode MPI rank
+  integer, save, public :: nproc_loc ! intranode number of processors
 
   ! parameters for 2D Cartesian topology 
-  integer, save, dimension(2) :: dims, coord
+  integer, save, dimension(2) :: dims, coord, dims_loc, coord_loc
   logical, save, dimension(2) :: periodic
-  integer, save, public :: DECOMP_2D_COMM
+  integer, save, public :: DECOMP_2D_COMM, DECOMP_2D_LOCALCOMM
   integer, save, public :: DECOMP_2D_COMM_CART_X, &
        DECOMP_2D_COMM_CART_Y, DECOMP_2D_COMM_CART_Z 
   integer, save :: DECOMP_2D_COMM_ROW, DECOMP_2D_COMM_COL
@@ -106,6 +109,11 @@ module decomp_2d
      integer, dimension(3) :: xst, xen, xsz  ! x-pencil
      integer, dimension(3) :: yst, yen, ysz  ! y-pencil
      integer, dimension(3) :: zst, zen, zsz  ! z-pencil
+
+     ! local size and index in case of MPI3 shared memory
+     integer, dimension(3) :: xst_loc, xen_loc, xsz_loc
+     integer, dimension(3) :: yst_loc, yen_loc, ysz_loc
+     integer, dimension(3) :: zst_loc, zen_loc, zsz_loc
 
      ! in addition to local information, processors also need to know 
      ! some global information for global communications to work 
@@ -290,7 +298,7 @@ contains
   !     all internal data structures initialised properly
   !     library ready to use
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine decomp_2d_init(nx,ny,nz,p_row,p_col,periodic_bc,glob_comm)
+  subroutine decomp_2d_init(nx,ny,nz,p_row,p_col,periodic_bc,glob_comm,local_comm)
 
     use iso_fortran_env, only : output_unit
 
@@ -299,7 +307,7 @@ contains
     integer, intent(IN) :: nx,ny,nz
     integer, intent(INOUT) :: p_row,p_col
     logical, dimension(3), intent(IN), optional :: periodic_bc
-    integer, intent(in), optional :: glob_comm
+    integer, intent(in), optional :: glob_comm, local_comm
 
     integer :: errorcode, ierror, row, col, iounit
 #ifdef DEBUG
@@ -310,6 +318,23 @@ contains
        DECOMP_2D_COMM = glob_comm
     else
        DECOMP_2D_COMM = MPI_COMM_WORLD
+    endif
+
+    if (DECOMP_2D_COMM /= MPI_COMM_WORLD .and. present(local_comm)) then
+       ! MPI3 shared memory
+       DECOMP_2D_LOCALCOMM = local_comm
+       ! Only local masters will perform MPI operations
+       if (DECOMP_2D_COMM == MPI_COMM_NULL) then
+          call decomp_2d_map_local()
+          call decomp_info_init(nx, ny, nz, decomp_main)
+          call decomp_2d_init_local()
+          return
+       endif
+    else
+       ! No MPI3 shared memory
+       DECOMP_2D_LOCALCOMM = MPI_COMM_NULL
+       nrank_loc = -1
+       nproc_loc = -1
     endif
 
     !
@@ -386,6 +411,9 @@ contains
          DECOMP_2D_COMM_ROW,ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_SUB")
 
+    ! MPI3 shared memory : intra-node CPU map
+    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL) call decomp_2d_map_local()
+
     ! gather information for halo-cell support code
     call init_neighbour
 
@@ -449,6 +477,9 @@ contains
 #endif
 #endif
 
+    ! If MPI3 shared memory
+    if (DECOMP_2D_COMM /= MPI_COMM_WORLD) call decomp_2d_init_local()
+
     !
     ! Select the IO unit for decomp_2d setup
     !
@@ -478,6 +509,90 @@ contains
 
     return
   end subroutine decomp_2d_init
+
+  !
+  ! If MPI3 shared memory, local master should broadcast decomp_2d stuff
+  !
+  subroutine decomp_2d_init_local()
+
+     implicit none
+
+     integer :: ierror
+
+     !
+     ! Broadcast
+     !
+
+     call MPI_BCAST(mytype_bytes, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(nx_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(ny_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(nz_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(dims, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(coord, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(xstart, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(xend, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(xsize, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(ystart, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(yend, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(ysize, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(zstart, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(zend, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(zsize, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+  end subroutine decomp_2d_init_local
+
+  !
+  ! MPI3 shared memory : intranode CPU map (1D slab decomposition)
+  !
+  subroutine decomp_2d_map_local()
+
+     implicit none
+
+     integer :: ierror, TMP_COMM_CART
+
+     !
+     ! Get local rank and comm size
+     call MPI_COMM_RANK(DECOMP_2D_LOCALCOMM, nrank_loc, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_RANK")
+     call MPI_COMM_SIZE(DECOMP_2D_LOCALCOMM, nproc_loc, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_SIZE")
+     !
+     ! Build a 1D CPU grid (arrays dims_loc and coord_loc)
+     dims_loc(1) = 1
+     dims_loc(2) = nproc_loc
+     call MPI_CART_CREATE(DECOMP_2D_LOCALCOMM, 2, dims_loc, &
+             (/.false.,.false./), & ! no periodicity
+             .false., &  ! do not reorder rank
+             TMP_COMM_CART, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_CREATE")
+     call MPI_CART_COORDS(TMP_COMM_CART, nrank_loc, 2, coord_loc, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_COORDS")
+     !
+     ! Free the cartesian MPI comm
+     call MPI_COMM_FREE(TMP_COMM_CART, ierror)
+     if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
+
+  end subroutine decomp_2d_map_local
 
   !
   ! Reshape Y and Z pencils so that the leading dimension is the working one
@@ -527,6 +642,18 @@ contains
  
     integer :: ierror
 
+    ! Release localcomm if possible
+    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL .and. DECOMP_2D_LOCALCOMM /= MPI_COMM_WORLD) then       
+       call MPI_COMM_FREE(DECOMP_2D_LOCALCOMM, ierror)                                               
+       if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")          
+    endif 
+
+    ! Nothing more to do if MPI3 shared memory and the rank is not local master
+    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
+
+    ierror = 0
+    if (DECOMP_2D_COMM /= MPI_COMM_WORLD) call MPI_COMM_FREE(DECOMP_2D_COMM, ierror)
+    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
     call MPI_COMM_FREE(DECOMP_2D_COMM_ROW, ierror)
     if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
     call MPI_COMM_FREE(DECOMP_2D_COMM_COL, ierror)
@@ -585,6 +712,22 @@ contains
     TYPE(DECOMP_INFO), intent(INOUT) :: decomp
 
     integer :: buf_size, status, errorcode
+
+    ! In case of MPI3 shared memory and proc is not local master
+    if (DECOMP_2D_COMM == MPI_COMM_NULL) then
+       call decomp_info_init_local(decomp)
+       call decomp_info_init_reshapeyz(decomp)
+       call partition(decomp%xsz(1),1,decomp%xsz(2)*decomp%xsz(3), &
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%xst_loc,decomp%xen_loc,decomp%xsz_loc)
+       call partition(decomp%ysz(1),1,decomp%ysz(2)*decomp%ysz(3), &
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%yst_loc,decomp%yen_loc,decomp%ysz_loc)
+       call partition(decomp%zsz(1),1,decomp%zsz(2)*decomp%zsz(3), &
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%zst_loc,decomp%zen_loc,decomp%zsz_loc)
+       return
+    endif
 
     ! verify the global size can actually be distributed as pencils
     if (nx_global<dims(1) .or. ny_global<dims(1) .or. ny_global<dims(2) .or. nz_global<dims(2)) then
@@ -703,12 +846,84 @@ contains
        end if
     end if
 
+    ! In case of MPI3 shared memory and proc is local master
+    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL) call decomp_info_init_local(decomp)
+
     ! Reshape Y and Z pencils
     call decomp_info_init_reshapeyz(decomp)
+
+    ! Compute the local index
+    if (DECOMP_2D_LOCALCOMM == MPI_COMM_NULL) then
+       ! No MPI3 shared memory
+       decomp%xst_loc = decomp%xst
+       decomp%xen_loc = decomp%xen
+       decomp%xsz_loc = decomp%xsz
+       decomp%yst_loc = decomp%yst                                                                   
+       decomp%yen_loc = decomp%yen                                                                   
+       decomp%ysz_loc = decomp%ysz
+       decomp%zst_loc = decomp%zst                                                                   
+       decomp%zen_loc = decomp%zen                                                                   
+       decomp%zsz_loc = decomp%zsz
+    else
+       ! MPI3 shared memory
+       call partition(decomp%xsz(1),1,decomp%xsz(2)*decomp%xsz(3), & 
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%xst_loc,decomp%xen_loc,decomp%xsz_loc)
+       call partition(decomp%ysz(1),1,decomp%ysz(2)*decomp%ysz(3), &
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%yst_loc,decomp%yen_loc,decomp%ysz_loc)
+       call partition(decomp%zsz(1),1,decomp%zsz(2)*decomp%zsz(3), &
+            (/1,2,3/), dims_loc, coord_loc, &
+            decomp%zst_loc,decomp%zen_loc,decomp%zsz_loc)
+    endif
 
     return
   end subroutine decomp_info_init
 
+  !
+  ! If MPI3 shared memory, local master should broadcast decomp_info stuff
+  !
+  subroutine decomp_info_init_local(decomp)
+
+     implicit none
+
+     type(decomp_info), intent(inout) :: decomp
+
+     integer :: ierror
+
+     call MPI_BCAST(decomp%xst, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%xen, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%xsz, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(decomp%yst, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%yen, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%ysz, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(decomp%zst, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%zen, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%zsz, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(decomp%x1count, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%y1count, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%y2count, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%z2count, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+
+     call MPI_BCAST(decomp%even, 1, MPI_LOGICAL, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+  end subroutine decomp_info_init_local
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Release memory associated with a DECOMP_INFO object
@@ -718,6 +933,9 @@ contains
     implicit none
 
     TYPE(DECOMP_INFO), intent(INOUT) :: decomp
+
+    ! If MPI3 shared memory and rank is not local master
+    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
 
     if (allocated(decomp%x1dist)) deallocate(decomp%x1dist)
     if (allocated(decomp%y1dist)) deallocate(decomp%y1dist)
