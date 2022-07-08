@@ -146,6 +146,9 @@ submodule (decomp_2d) d2d_log
     write (io_unit, *) '   xsz, xst, xen : ', d2d%xsz, d2d%xst, d2d%xen
     write (io_unit, *) '   ysz, yst, yen : ', d2d%ysz, d2d%yst, d2d%yen
     write (io_unit, *) '   zsz, zst, zen : ', d2d%zsz, d2d%zst, d2d%zen
+    write (io_unit, *) '   xsz_loc, xst_loc, xen_loc : ', d2d%xsz_loc, d2d%xst_loc, d2d%xen_loc
+    write (io_unit, *) '   ysz_loc, yst_loc, yen_loc : ', d2d%ysz_loc, d2d%yst_loc, d2d%yen_loc
+    write (io_unit, *) '   zsz_loc, zst_loc, zen_loc : ', d2d%zsz_loc, d2d%zst_loc, d2d%zen_loc
     write (io_unit, *) '   x1dist : ', d2d%x1dist
     write (io_unit, *) '   y1dist : ', d2d%y1dist
     write (io_unit, *) '   y2dist : ', d2d%y2dist
