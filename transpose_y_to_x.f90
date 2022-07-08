@@ -27,11 +27,6 @@
 #endif
 #endif
 
-#ifdef SHM
-    real(mytype) :: work1(*), work2(*)
-    POINTER  (work1_p, work1), (work2_p, work2)  ! Cray pointers
-#endif
-    
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
 
@@ -52,12 +47,6 @@
     d3 = decomp%xsz(3)
 
     ! rearrange source array as send buffer
-#ifdef SHM
-    work1_p = decomp%COL_INFO%SND_P
-    call mem_split_yx_real(src, s1, s2, s3, work1, dims(1), &
-         decomp%y1dist, decomp)
-#else
-
 #if defined(_GPU)
     call mem_split_yx_real(src, s1, s2, s3, work1_r_d, dims(1), &
          decomp%y1dist, decomp)
@@ -66,24 +55,7 @@
          decomp%y1dist, decomp)
 #endif
 
-#endif
-
-    ! define receive buffer
-#ifdef SHM
-    work2_p = decomp%COL_INFO%RCV_P
-    call MPI_BARRIER(decomp%COL_INFO%CORE_COMM, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BARRIER")
-#endif
-    
     ! transpose using MPI_ALLTOALL(V)
-#ifdef SHM
-    if (decomp%COL_INFO%CORE_ME==1) THEN
-       call MPI_ALLTOALLV(work1, decomp%y1cnts_s, decomp%y1disp_s, &
-            real_type, work2, decomp%x1cnts_s, decomp%x1disp_s, &
-            real_type, decomp%COL_INFO%SMP_COMM, ierror)
-       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-    end if
-#else
 #ifdef EVEN
     call MPI_ALLTOALL(work1_r, decomp%y1count, &
          real_type, work2_r, decomp%x1count, &
@@ -114,24 +86,14 @@
 #endif
 
 #endif
-#endif
 
     ! rearrange receive buffer
-#ifdef SHM
-    call MPI_BARRIER(decomp%COL_INFO%CORE_COMM, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BARRIER")
-    call mem_merge_yx_real(work2, d1, d2, d3, dst, dims(1), &
-         decomp%x1dist, decomp)
-#else
-
 #if defined(_GPU)
     call mem_merge_yx_real(work2_r_d, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
 #else
     call mem_merge_yx_real(work2_r, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
-#endif
-
 #endif
     
     return
@@ -154,11 +116,6 @@
 #endif
 #endif
 
-#ifdef SHM
-    complex(mytype) :: work1(*), work2(*)
-    POINTER  (work1_p, work1), (work2_p, work2)  ! Cray pointers
-#endif
-    
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
 
@@ -179,12 +136,6 @@
     d3 = decomp%xsz(3)
     
     ! rearrange source array as send buffer
-#ifdef SHM
-    work1_p = decomp%COL_INFO%SND_P_c
-    call mem_split_yx_complex(src, s1, s2, s3, work1, dims(1), &
-         decomp%y1dist, decomp)
-#else
-
 #if defined(_GPU)
     call mem_split_yx_complex(src, s1, s2, s3, work1_c_d, dims(1), &
          decomp%y1dist, decomp)
@@ -192,25 +143,8 @@
     call mem_split_yx_complex(src, s1, s2, s3, work1_c, dims(1), &
          decomp%y1dist, decomp)
 #endif
-
-#endif
-    
-    ! define receive buffer
-#ifdef SHM
-    work2_p = decomp%COL_INFO%RCV_P_c
-    call MPI_BARRIER(decomp%COL_INFO%CORE_COMM, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BARRIER")
-#endif
     
     ! transpose using MPI_ALLTOALL(V)
-#ifdef SHM
-    if (decomp%COL_INFO%CORE_ME==1) THEN
-       call MPI_ALLTOALLV(work1, decomp%y1cnts_s, decomp%y1disp_s, &
-            complex_type, work2, decomp%x1cnts_s, decomp%x1disp_s, &
-            complex_type, decomp%COL_INFO%SMP_COMM, ierror)
-       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-    end if
-#else
 #ifdef EVEN
     call MPI_ALLTOALL(work1_c, decomp%y1count, &
          complex_type, work2_c, decomp%x1count, &
@@ -231,24 +165,14 @@
 #endif
 
 #endif
-#endif
 
     ! rearrange receive buffer
-#ifdef SHM
-    call MPI_BARRIER(decomp%COL_INFO%CORE_COMM, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BARRIER")
-    call mem_merge_yx_complex(work2, d1, d2, d3, dst, dims(1), &
-         decomp%x1dist, decomp)
-#else
-
 #if defined(_GPU)
     call mem_merge_yx_complex(work2_c_d, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
 #else
     call mem_merge_yx_complex(work2_c, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
-#endif
-
 #endif
 
     return
@@ -281,14 +205,10 @@
           i2 = i1+dist(m)-1
        end if
 
-#ifdef SHM
-       pos = decomp%y1disp_o(m) + 1
-#else
 #ifdef EVEN
        pos = m * decomp%y1count + 1
 #else
        pos = decomp%y1disp(m) + 1
-#endif
 #endif
 
 #if defined(_GPU)
@@ -335,14 +255,10 @@
           i2 = i1+dist(m)-1
        end if
 
-#ifdef SHM
-       pos = decomp%y1disp_o(m) + 1
-#else
 #ifdef EVEN
        pos = m * decomp%y1count + 1
 #else
        pos = decomp%y1disp(m) + 1
-#endif
 #endif
 
 #if defined(_GPU)
@@ -389,14 +305,10 @@
           i2 = i1+dist(m)-1
        end if
 
-#ifdef SHM
-       pos = decomp%x1disp_o(m) + 1
-#else
 #ifdef EVEN
        pos = m * decomp%x1count + 1
 #else
        pos = decomp%x1disp(m) + 1
-#endif
 #endif
 
 #if defined(_GPU)
@@ -443,14 +355,10 @@
           i2 = i1+dist(m)-1
        end if
 
-#ifdef SHM
-       pos = decomp%x1disp_o(m) + 1
-#else
 #ifdef EVEN
        pos = m * decomp%x1count + 1
 #else
        pos = decomp%x1disp(m) + 1
-#endif
 #endif
 
 #if defined(_GPU)
