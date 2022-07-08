@@ -562,11 +562,11 @@ contains
     call get_dist(nx,ny,nz,decomp)
 
     ! generate partition information - starting/ending index etc.
-    call partition(nx, ny, nz, (/ 1,2,3 /), &
+    call partition(nx, ny, nz, (/ 1,2,3 /), dims, coord, &
          decomp%xst, decomp%xen, decomp%xsz)
-    call partition(nx, ny, nz, (/ 2,1,3 /), &
+    call partition(nx, ny, nz, (/ 2,1,3 /), dims, coord, &
          decomp%yst, decomp%yen, decomp%ysz)
-    call partition(nx, ny, nz, (/ 2,3,1 /), &
+    call partition(nx, ny, nz, (/ 2,3,1 /), dims, coord, &
          decomp%zst, decomp%zen, decomp%zsz)
 
     ! prepare send/receive buffer displacement and count for ALLTOALL(V)
@@ -1161,17 +1161,20 @@ contains
   !                  valid values: 1 - distibute locally; 
   !                                2 - distribute across p_row; 
   !                                3 - distribute across p_col
+  !     dims(2)    - (p_row, p_col)
+  !     coord(2)   - coordinates of the CPU on the grid (p_row, p_col)
   !   OUTPUT:
   !     lstart(3)  - starting index
   !     lend(3)    - ending index
   !     lsize(3)   - size of the sub-block (redundant) 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine partition(nx, ny, nz, pdim, lstart, lend, lsize)
+  subroutine partition(nx, ny, nz, pdim, dims, coord, lstart, lend, lsize)
 
     implicit none
 
     integer, intent(IN) :: nx, ny, nz
     integer, dimension(3), intent(IN) :: pdim
+    integer, dimension(2), intent(IN) :: dims, coord
     integer, dimension(3), intent(OUT) :: lstart, lend, lsize
 
     integer, allocatable, dimension(:) :: st,en,sz
