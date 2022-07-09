@@ -387,7 +387,7 @@ contains
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_SUB")
 
     ! MPI3 shared memory : intra-node CPU map
-    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL) call decomp_2d_map_local()
+    if (d2d_intranode) call decomp_2d_map_local()
 
     ! gather information for halo-cell support code
     call init_neighbour
@@ -453,7 +453,7 @@ contains
 #endif
 
     ! If MPI3 shared memory, local master should broadcast some decomp_2d stuff
-    if (DECOMP_2D_COMM /= MPI_COMM_WORLD) call decomp_2d_init_local()
+    if (d2d_intranode) call decomp_2d_init_local()
 
     !
     ! Print decomp_2d setup
@@ -671,7 +671,7 @@ contains
     integer :: buf_size, status, errorcode
 
     ! In case of MPI3 shared memory and proc is not local master
-    if (DECOMP_2D_COMM == MPI_COMM_NULL) then
+    if (d2d_intranode .and. nrank_loc/=0) then
        call decomp_info_init_local(decomp)
        call decomp_info_init_reshapeyz(decomp)
        call partition(decomp%xsz(1),1,decomp%xsz(2)*decomp%xsz(3), &
@@ -799,13 +799,13 @@ contains
     end if
 
     ! In case of MPI3 shared memory and proc is local master
-    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL) call decomp_info_init_local(decomp)
+    if (d2d_intranode) call decomp_info_init_local(decomp)
 
     ! Reshape Y and Z pencils
     call decomp_info_init_reshapeyz(decomp)
 
     ! Compute the local index
-    if (DECOMP_2D_LOCALCOMM == MPI_COMM_NULL) then
+    if (.not.d2d_intranode) then
        ! No MPI3 shared memory
        decomp%xst_loc = decomp%xst
        decomp%xen_loc = decomp%xen
