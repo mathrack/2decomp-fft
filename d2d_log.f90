@@ -21,6 +21,8 @@ submodule (decomp_2d) d2d_log
   !
   module function d2d_get_iounit() result(iounit)
 
+     use iso_fortran_env, only : output_unit
+
      implicit none
 
      integer :: iounit
