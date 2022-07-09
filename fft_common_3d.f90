@@ -137,19 +137,11 @@ if (format==PHYSICAL_IN_X) then
 call r2c_1m_x(in_r,wk13)
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
-if (dims(1)>1) then
 call transpose_x_to_y(wk13,wk2_r2c,sp)
 call c2c_1m_y(wk2_r2c,-1,sp)
-else
-call c2c_1m_y(wk13,-1,sp)
-end if
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-if (dims(1)>1) then
 call transpose_y_to_z(wk2_r2c,out_c,sp)
-else
-call transpose_y_to_z(wk13,out_c,sp)
-end if
 call c2c_1m_z(out_c,-1,sp)
 
 else if (format==PHYSICAL_IN_Z) then
@@ -158,18 +150,11 @@ else if (format==PHYSICAL_IN_Z) then
 call r2c_1m_z(in_r,wk13)
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
-if (dims(1)>1) then
 call transpose_z_to_y(wk13,wk2_r2c,sp)
 call c2c_1m_y(wk2_r2c,-1,sp)
-else  ! out_c==wk2_r2c if 1D decomposition
-call transpose_z_to_y(wk13,out_c,sp)
-call c2c_1m_y(out_c,-1,sp)
-end if
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-if (dims(1)>1) then
 call transpose_y_to_x(wk2_r2c,out_c,sp)
-end if
 call c2c_1m_x(out_c,-1,sp)
 
 end if
@@ -216,12 +201,8 @@ call transpose_z_to_y(wk1,wk2_r2c,sp)
 call c2c_1m_y(wk2_r2c,1,sp)
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-if (dims(1)>1) then
 call transpose_y_to_x(wk2_r2c,wk13,sp)
 call c2r_1m_x(wk13,out_r)
-else
-call c2r_1m_x(wk2_r2c,out_r)
-end if
 
 else if (format==PHYSICAL_IN_Z) then
 
@@ -237,31 +218,15 @@ call c2c_1m_x(wk1,1,sp)
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
-if (dims(1)>1) then
 #ifdef OVERWRITE
 call transpose_x_to_y(in_c,wk2_r2c,sp)
 #else
 call transpose_x_to_y(wk1,wk2_r2c,sp)
 #endif
 call c2c_1m_y(wk2_r2c,1,sp)
-else  ! in_c==wk2_r2c if 1D decomposition
-#ifdef OVERWRITE
-call c2c_1m_y(in_c,1,sp)
-#else
-call c2c_1m_y(wk1,1,sp)
-#endif
-end if
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-if (dims(1)>1) then
 call transpose_y_to_z(wk2_r2c,wk13,sp)
-else
-#ifdef OVERWRITE
-call transpose_y_to_z(in_c,wk13,sp)
-#else
-call transpose_y_to_z(wk1,wk13,sp)
-#endif
-end if
 call c2r_1m_z(wk13,out_r)
 
 end if

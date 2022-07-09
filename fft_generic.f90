@@ -42,8 +42,8 @@ module decomp_2d_fft
        write(*,*) ' '
     end if
 
-    cbuf_size = max(ph%xsz(1), ph%ysz(2))
-    cbuf_size = max(cbuf_size, ph%zsz(3))
+    cbuf_size = max(ph%xsz(1), ph%ysz(1))
+    cbuf_size = max(cbuf_size, ph%zsz(1))
     allocate(buf(cbuf_size))
     allocate(scratch(cbuf_size))
 
@@ -114,13 +114,13 @@ module decomp_2d_fft
 
     !$acc parallel loop gang vector collapse(2) private(buf, scratch)
     do k=1,decomp%ysz(3)
-       do i=1,decomp%ysz(1)
-          do j=1,decomp%ysz(2)
-             buf(j) = inout(i,j,k)
+       do j=1,decomp%ysz(2)
+          do i=1,decomp%ysz(1)
+             buf(i) = inout(i,j,k)
           end do
-          call spcfft(buf,decomp%ysz(2),isign,scratch)
-          do j=1,decomp%ysz(2)
-             inout(i,j,k) = buf(j)
+          call spcfft(buf,decomp%ysz(1),isign,scratch)
+          do i=1,decomp%ysz(1)
+             inout(i,j,k) = buf(i)
           end do
        end do
     end do
@@ -144,14 +144,14 @@ module decomp_2d_fft
     integer :: i,j,k
 
     !$acc parallel loop gang vector collapse(2) private(buf, scratch)
-    do j=1,decomp%zsz(2)
-       do i=1,decomp%zsz(1)
-          do k=1,decomp%zsz(3)
-             buf(k) = inout(i,j,k)
+    do k=1,decomp%zsz(3)
+       do j=1,decomp%zsz(2)
+          do i=1,decomp%zsz(1)
+             buf(i) = inout(i,j,k)
           end do
-          call spcfft(buf,decomp%zsz(3),isign,scratch)
-          do k=1,decomp%zsz(3)
-             inout(i,j,k) = buf(k)
+          call spcfft(buf,decomp%zsz(1),isign,scratch)
+          do i=1,decomp%zsz(1)
+             inout(i,j,k) = buf(i)
           end do
        end do
     end do
@@ -211,27 +211,27 @@ module decomp_2d_fft
     real(mytype), dimension(:,:,:), intent(IN)  ::  input
     complex(mytype), dimension(:,:,:), intent(OUT) :: output
 
-    integer :: i,j,k, s1,s2,s3, d3
+    integer :: i,j,k, s1,s2,s3, d1
 
     s1 = size(input,1)
     s2 = size(input,2)
     s3 = size(input,3)
-    d3 = size(output,3)
+    d1 = size(output,1)
 
     !$acc parallel loop gang vector collapse(2) private(buf, scratch)
-    do j=1,s2
-       do i=1,s1
+    do k=1,s3
+       do j=1,s2
           ! Glassman's FFT is c2c only, 
           ! needing some pre- and post-processing for r2c
           ! pack real input in complex storage
-          do k=1,s3
-             buf(k) = cmplx(input(i,j,k),0._mytype, kind=mytype)
+          do i=1,s1
+             buf(i) = cmplx(input(i,j,k),0._mytype, kind=mytype)
           end do
-          call spcfft(buf,s3,-1,scratch)
+          call spcfft(buf,s1,-1,scratch)
           ! note d3 ~ s3/2+1
           ! simply drop the redundant part of the complex output
-          do k=1,d3
-             output(i,j,k) = buf(k)
+          do i=1,d1
+             output(i,j,k) = buf(i)
           end do
        end do
     end do
@@ -305,17 +305,17 @@ module decomp_2d_fft
     d3 = size(output,3)
 
     !$acc parallel loop gang vector collapse(2) private(buf, scratch)
-    do j=1,d2
-       do i=1,d1
-          do k=1,d3/2+1
-             buf(k) = input(i,j,k)
+    do k=1,d3
+       do j=1,d2
+          do i=1,d1/2+1
+             buf(i) = input(i,j,k)
           end do
-          do k=d3/2+2,d3
-             buf(k) =  conjg(buf(d3+2-k))
+          do i=d1/2+2,d1
+             buf(i) =  conjg(buf(d1+2-i))
           end do
-          call spcfft(buf,d3,1,scratch)
-          do k=1,d3
-             output(i,j,k) = real(buf(k), kind=mytype)
+          call spcfft(buf,d1,1,scratch)
+          do i=1,d1
+             output(i,j,k) = real(buf(i), kind=mytype)
           end do
        end do
     end do
