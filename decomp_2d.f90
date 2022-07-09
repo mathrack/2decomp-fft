@@ -75,6 +75,9 @@ module decomp_2d
   ! flags for periodic condition in three dimensions
   logical, save :: periodic_x, periodic_y, periodic_z
 
+  ! flag for intranode communicator
+  logical, save :: d2d_intranode
+
 #if defined(_GPU)
 #if defined(_NCCL)
   integer, save :: row_rank, col_rank
@@ -285,6 +288,7 @@ contains
 
     if (DECOMP_2D_COMM /= MPI_COMM_WORLD .and. present(local_comm)) then
        ! MPI3 shared memory
+       d2d_intranode = .true.
        DECOMP_2D_LOCALCOMM = local_comm
        ! Only local masters will perform MPI operations
        if (DECOMP_2D_COMM == MPI_COMM_NULL) then
@@ -300,6 +304,7 @@ contains
        endif
     else
        ! No MPI3 shared memory
+       d2d_intranode = .false.
        DECOMP_2D_LOCALCOMM = MPI_COMM_NULL
        nrank_loc = -1
        nproc_loc = -1
