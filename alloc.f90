@@ -52,7 +52,10 @@
           allocate(var(decomp%xsz(1),decomp%xsz(2),decomp%xsz(3)), &
                stat=alloc_stat)
        end if
-       if (present(var2d)) nullify(var2d)
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%xsz(1),decomp%xsz(2)*decomp%xsz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !
@@ -132,7 +135,10 @@
           allocate(var(decomp%xsz(1),decomp%xsz(2),decomp%xsz(3)), &
                stat=alloc_stat)
        end if
-       if (present(var2d)) nullify(var2d)
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%xsz(1),decomp%xsz(2)*decomp%xsz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !
@@ -212,6 +218,10 @@
           allocate(var(decomp%ysz(1),decomp%ysz(2),decomp%ysz(3)), &
                stat=alloc_stat)
        end if
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%ysz(1),decomp%ysz(2)*decomp%ysz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !
@@ -291,6 +301,10 @@
           allocate(var(decomp%ysz(1),decomp%ysz(2),decomp%ysz(3)), &
                stat=alloc_stat)
        end if
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%ysz(1),decomp%ysz(2)*decomp%ysz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !
@@ -370,6 +384,10 @@
           allocate(var(decomp%zsz(1),decomp%zsz(2),decomp%zsz(3)), &
                stat=alloc_stat)
        end if
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%zsz(1),decomp%zsz(2)*decomp%zsz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !
@@ -449,6 +467,10 @@
           allocate(var(decomp%zsz(1),decomp%zsz(2),decomp%zsz(3)), &
                stat=alloc_stat)
        end if
+       if (present(var2d) .and. (.not.global) .and. (alloc_stat/=0) ) then
+          if (associated(var2d)) nullify(var2d)
+          call c_f_pointer(c_loc(var), var2d, (/decomp%zsz(1),decomp%zsz(2)*decomp%zsz(3)/))
+       endif
     else
        ! MPI3 shared memory, the caller should free the MPI window
        !

@@ -16,7 +16,7 @@ module decomp_2d
 
   use MPI
   use, intrinsic :: iso_fortran_env, only : real32, real64
-  use, intrinsic :: iso_c_binding, only : c_ptr, c_f_pointer
+  use, intrinsic :: iso_c_binding, only : c_loc, c_ptr, c_f_pointer
 #if defined(_GPU)
   use cudafor
 #if defined(_NCCL)
