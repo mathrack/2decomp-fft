@@ -292,6 +292,8 @@ contains
        DECOMP_2D_LOCALCOMM = local_comm
        ! Only local masters will perform MPI operations
        if (DECOMP_2D_COMM == MPI_COMM_NULL) then
+          nrank = -1
+          nproc = -1
           ! Intra-node CPU map
           call decomp_2d_map_local()
           ! Initialize the main decomp_info object
