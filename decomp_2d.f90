@@ -76,7 +76,7 @@ module decomp_2d
   logical, save :: periodic_x, periodic_y, periodic_z
 
   ! flag for intranode communicator
-  logical, save :: d2d_intranode
+  logical, save, public :: d2d_intranode
 
 #if defined(_GPU)
 #if defined(_NCCL)

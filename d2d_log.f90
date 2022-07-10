@@ -100,6 +100,7 @@ submodule (decomp_2d) d2d_log
     write (io_unit, *) 'Global data size : ', nx_global, ny_global, nz_global
     write (io_unit, *) 'p_row, p_col : ', dims(1), dims(2)
     write (io_unit, *) 'Periodicity : ', periodic_x, periodic_y, periodic_z
+    write (io_unit, *) 'Intranode : ', d2d_intranode
     write (io_unit, *) 'Number of bytes / float number : ', mytype_bytes
     write (io_unit, *) '==========================================================='
 
