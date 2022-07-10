@@ -121,6 +121,7 @@ if (format==PHYSICAL_IN_X) then
 call alloc_x(wk13, opt_decomp=sp)
 else if (format==PHYSICAL_IN_Z) then
 call alloc_z(wk13, opt_decomp=sp)
+end if
 
 call init_fft_engine
 
