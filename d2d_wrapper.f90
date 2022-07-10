@@ -29,7 +29,11 @@ contains
       ! Local variable
       integer :: ierror
 
-      if (win == MPI_WIN_NULL) return
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not.d2d_intranode) call decomp_2d_abort(-1,"Error")
+      if (win == MPI_WIN_NULL) call decomp_2d_abort(-1,"Error")
+#endif
 
       call MPI_WIN_FENCE(0, win, ierror)
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_WIN_FENCE")
@@ -49,7 +53,11 @@ contains
       ! Local variable
       integer :: ierror
 
-      if (win == MPI_WIN_NULL) return
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not.d2d_intranode) call decomp_2d_abort(-1,"Error")
+      if (win == MPI_WIN_NULL) call decomp_2d_abort(-1,"Error")
+#endif
 
       call MPI_WIN_FREE(win, ierror)
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_WIN_FREE")
