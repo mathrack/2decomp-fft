@@ -52,6 +52,45 @@ module procedure fft_3d_r2c
 module procedure fft_3d_c2r
 end interface
 
+interface c2c_1m
+module procedure c2c_1m_3d
+module procedure c2c_1m_2d
+end interface
+
+interface c2c_1m_x
+module procedure c2c_1m_x_3d
+module procedure c2c_1m_x_2d
+end interface
+
+interface c2c_1m_y
+module procedure c2c_1m_y_3d
+module procedure c2c_1m_y_2d
+end interface
+
+interface c2c_1m_z
+module procedure c2c_1m_z_3d
+module procedure c2c_1m_z_2d
+end interface
+
+interface r2c_1m_x
+module procedure r2c_1m_x_3d
+module procedure r2c_1m_x_2d
+end interface
+
+interface r2c_1m_z
+module procedure r2c_1m_z_3d
+module procedure r2c_1m_z_2d
+end interface
+
+interface c2r_1m_x
+module procedure c2r_1m_x_3d
+module procedure c2r_1m_x_2d
+end interface
+
+interface c2r_1m_z
+module procedure c2r_1m_z_3d
+module procedure c2r_1m_z_2d
+end interface
 
 contains
 

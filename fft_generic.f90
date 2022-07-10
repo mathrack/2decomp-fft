@@ -69,7 +69,7 @@ module decomp_2d_fft
   ! the basis of three-dimensional FFTs.
 
   ! c2c transform, multiple 1D FFTs
-  subroutine c2c_1m(inout, isign, n1, n2, n3)
+  subroutine c2c_1m_3d(inout, isign, n1, n2, n3)
 
     !$acc routine(spcfft) seq
 
@@ -94,10 +94,35 @@ module decomp_2d_fft
     end do
     !$acc end parallel loop
 
-  end subroutine c2c_1m
+  end subroutine c2c_1m_3d
+
+  subroutine c2c_1m_2d(inout, isign, n1, n2)
+
+    !$acc routine(spcfft) seq
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign, n1, n2
+
+    integer :: i,j
+
+    !$acc parallel loop gang vector private(buf, scratch)
+    do j=1,n2
+       do i=1,n1
+          buf(i) = inout(i,j)
+       end do
+       call spcfft(buf,n1,isign,scratch)
+       do i=1,n1
+          inout(i,j) = buf(i)
+       end do
+    end do
+    !$acc end parallel loop
+
+  end subroutine c2c_1m_2d
 
   ! c2c transform, multiple 1D FFTs in x direction
-  subroutine c2c_1m_x(inout, isign, decomp)
+  subroutine c2c_1m_x_3d(inout, isign, decomp)
 
     implicit none
 
@@ -107,10 +132,22 @@ module decomp_2d_fft
 
     call c2c_1m(inout, isign, decomp%xsz(1), decomp%xsz(2), decomp%xsz(3))
 
-  end subroutine c2c_1m_x
+  end subroutine c2c_1m_x_3d
+
+  subroutine c2c_1m_x_2d(inout, isign, decomp)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    call c2c_1m(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3))
+
+  end subroutine c2c_1m_x_2d
 
   ! c2c transform, multiple 1D FFTs in y direction
-  subroutine c2c_1m_y(inout, isign, decomp)
+  subroutine c2c_1m_y_3d(inout, isign, decomp)
 
     implicit none
 
@@ -120,10 +157,22 @@ module decomp_2d_fft
 
     call c2c_1m(inout, isign, decomp%ysz(1), decomp%ysz(2), decomp%ysz(3))
 
-  end subroutine c2c_1m_y
+  end subroutine c2c_1m_y_3d
+
+  subroutine c2c_1m_y_2d(inout, isign, decomp)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    call c2c_1m(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3))
+
+  end subroutine c2c_1m_y_2d
 
   ! c2c transform, multiple 1D FFTs in z direction
-  subroutine c2c_1m_z(inout, isign, decomp)
+  subroutine c2c_1m_z_3d(inout, isign, decomp)
 
     implicit none
 
@@ -133,10 +182,22 @@ module decomp_2d_fft
 
     call c2c_1m(inout, isign, decomp%zsz(1), decomp%zsz(2), decomp%zsz(3))
 
-  end subroutine c2c_1m_z
+  end subroutine c2c_1m_z_3d
+
+  subroutine c2c_1m_z_2d(inout, isign, decomp)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    call c2c_1m(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3))
+
+  end subroutine c2c_1m_z_2d
 
   ! r2c transform, multiple 1D FFTs in x direction
-  subroutine r2c_1m_x(input, output)
+  subroutine r2c_1m_x_3d(input, output)
 
     !$acc routine(spcfft) seq
 
@@ -173,10 +234,44 @@ module decomp_2d_fft
 
     return
 
-  end subroutine r2c_1m_x
+  end subroutine r2c_1m_x_3d
+
+  subroutine r2c_1m_x_2d(input, output)
+
+    !$acc routine(spcfft) seq
+
+    implicit none
+
+    real(mytype), dimension(:,:), intent(IN)  ::  input
+    complex(mytype), dimension(:,:), intent(OUT) :: output
+
+    integer :: i,j, s1,s2, d1
+
+    s1 = size(input,1)
+    s2 = size(input,2)
+    d1 = size(output,1)
+
+    !$acc parallel loop gang vector private(buf, scratch)
+    do j=1,s2
+       ! Glassman's FFT is c2c only, 
+       ! needing some pre- and post-processing for r2c
+       ! pack real input in complex storage
+       do i=1,s1
+          buf(i) = cmplx(input(i,j),0._mytype, kind=mytype)
+       end do
+       call spcfft(buf,s1,-1,scratch)
+       ! note d1 ~ s1/2+1
+       ! simply drop the redundant part of the complex output
+       do i=1,d1
+          output(i,j) = buf(i)
+       end do
+    end do
+    !$acc end parallel loop
+
+  end subroutine r2c_1m_x_2d
 
   ! r2c transform, multiple 1D FFTs in z direction
-  subroutine r2c_1m_z(input, output)
+  subroutine r2c_1m_z_3d(input, output)
 
     implicit none
 
@@ -185,10 +280,21 @@ module decomp_2d_fft
 
     call r2c_1m_x(input, output)
 
-  end subroutine r2c_1m_z
+  end subroutine r2c_1m_z_3d
+
+  subroutine r2c_1m_z_2d(input, output)
+
+    implicit none
+
+    real(mytype), dimension(:,:), intent(IN)  ::  input
+    complex(mytype), dimension(:,:), intent(OUT) :: output
+
+    call r2c_1m_x(input, output)
+
+  end subroutine r2c_1m_z_2d
 
   ! c2r transform, multiple 1D FFTs in x direction
-  subroutine c2r_1m_x(input, output)
+  subroutine c2r_1m_x_3d(input, output)
 
     !$acc routine(spcfft) seq
 
@@ -232,10 +338,51 @@ module decomp_2d_fft
 
     return
 
-  end subroutine c2r_1m_x
+  end subroutine c2r_1m_x_3d
+
+  subroutine c2r_1m_x_2d(input, output)
+
+    !$acc routine(spcfft) seq
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(IN)  ::  input
+    real(mytype), dimension(:,:), intent(OUT) :: output
+
+    integer :: i,j, d1,d2
+
+    d1 = size(output,1)
+    d2 = size(output,2)
+
+    !$acc parallel loop gang vector collapse(2) private(buf, scratch)
+    do j=1,d2
+       ! Glassman's FFT is c2c only, 
+       ! needing some pre- and post-processing for c2r
+       do i=1,d1/2+1
+          buf(i) = input(i,j)
+       end do
+       ! expanding to a full-size complex array
+       ! For odd N, the storage is:
+       !  1, 2, ...... N/2+1   integer division rounded down
+       !     N, ...... N/2+2   => a(i) is conjugate of a(N+2-i)
+       ! For even N, the storage is:
+       !  1, 2, ...... N/2  , N/2+1
+       !     N, ...... N/2+2  again a(i) conjugate of a(N+2-i)
+       do i=d1/2+2,d1
+          buf(i) =  conjg(buf(d1+2-i))
+       end do
+       call spcfft(buf,d1,1,scratch)
+       do i=1,d1
+          ! simply drop imaginary part
+          output(i,j) = real(buf(i), kind=mytype)
+       end do
+    end do
+    !$acc end parallel loop
+
+  end subroutine c2r_1m_x_2d
 
   ! c2r transform, multiple 1D FFTs in z direction
-  subroutine c2r_1m_z(input, output)
+  subroutine c2r_1m_z_3d(input, output)
 
     implicit none
 
@@ -244,7 +391,18 @@ module decomp_2d_fft
 
     call c2r_1m_x(input, output)
 
-  end subroutine c2r_1m_z
+  end subroutine c2r_1m_z_3d
+
+  subroutine c2r_1m_z_2d(input, output)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(IN)  ::  input
+    real(mytype), dimension(:,:), intent(OUT) :: output
+
+    call c2r_1m_x(input, output)
+
+  end subroutine c2r_1m_z_2d
 
 
 #include "fft_common_3d.f90"
