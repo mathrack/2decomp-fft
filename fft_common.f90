@@ -28,13 +28,13 @@ integer, save :: nx_fft, ny_fft, nz_fft
 
 ! Decomposition objects
 TYPE(DECOMP_INFO), save :: ph  ! physical space
-TYPE(DECOMP_INFO), save :: sp  ! spectral space
+TYPE(DECOMP_INFO), save, public :: sp  ! spectral space
 
 ! Workspace to store the intermediate Y-pencil data
 ! *** TODO: investigate how to use only one workspace array
-complex(mytype), pointer, dimension(:,:,:) :: wk2_c2c, wk2_r2c
-complex(mytype), pointer, dimension(:,:) :: wk2_c2c_2d, wk2_r2c_2d
-integer :: wk2_c2c_win, wk2_r2c_win
+complex(mytype), pointer, save, dimension(:,:,:) :: wk2_c2c, wk2_r2c
+complex(mytype), pointer, save, dimension(:,:) :: wk2_c2c_2d, wk2_r2c_2d
+integer, save:: wk2_c2c_win, wk2_r2c_win
 complex(mytype), pointer, save, dimension(:,:,:) :: wk13
 complex(mytype), pointer, save, dimension(:,:) :: wk13_2d
 integer, save :: wk13_win
@@ -130,8 +130,6 @@ implicit none
 integer, intent(IN) :: pencil
 integer, intent(IN) :: nx, ny, nz
 
-logical, dimension(2) :: dummy_periods
-integer, dimension(2) :: dummy_coords
 integer :: errorcode, ierror
 
 if (initialised) then
