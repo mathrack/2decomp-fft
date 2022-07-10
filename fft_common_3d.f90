@@ -45,31 +45,15 @@ call c2c_1m_x(wk1,isign,ph)
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 
-if (dims(1)>1) then
 #ifdef OVERWRITE
 call transpose_x_to_y(in,wk2_c2c,ph)
 #else
 call transpose_x_to_y(wk1,wk2_c2c,ph)
 #endif
 call c2c_1m_y(wk2_c2c,isign,ph)
-else
-#ifdef OVERWRITE
-call c2c_1m_y(in,isign,ph)
-#else
-call c2c_1m_y(wk1,isign,ph)
-#endif
-end if
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-if (dims(1)>1) then
 call transpose_y_to_z(wk2_c2c,out,ph)
-else
-#ifdef OVERWRITE
-call transpose_y_to_z(in,out,ph)
-#else
-call transpose_y_to_z(wk1,out,ph)
-#endif
-end if
 call c2c_1m_z(out,isign,ph)
 
 else if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_BACKWARD &
@@ -88,26 +72,15 @@ call c2c_1m_z(wk1,isign,ph)
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
-if (dims(1)>1) then
 #ifdef OVERWRITE
 call transpose_z_to_y(in,wk2_c2c,ph)
 #else
 call transpose_z_to_y(wk1,wk2_c2c,ph)
 #endif
 call c2c_1m_y(wk2_c2c,isign,ph)
-else  ! out==wk2_c2c if 1D decomposition
-#ifdef OVERWRITE
-call transpose_z_to_y(in,out,ph)
-#else
-call transpose_z_to_y(wk1,out,ph)
-#endif
-call c2c_1m_y(out,isign,ph)
-end if
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-if (dims(1)>1) then
 call transpose_y_to_x(wk2_c2c,out,ph)
-end if
 call c2c_1m_x(out,isign,ph)
 
 end if

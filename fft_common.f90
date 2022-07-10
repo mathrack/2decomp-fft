@@ -26,9 +26,6 @@ logical, save :: initialised = .false.
 ! Global size of the FFT
 integer, save :: nx_fft, ny_fft, nz_fft
 
-! 2D processor grid
-integer, save, dimension(2) :: dims
-
 ! Decomposition objects
 TYPE(DECOMP_INFO), save :: ph  ! physical space
 TYPE(DECOMP_INFO), save :: sp  ! spectral space
@@ -104,11 +101,6 @@ format = pencil
 nx_fft = nx
 ny_fft = ny
 nz_fft = nz
-
-! determine the processor grid in use
-call MPI_CART_GET(DECOMP_2D_COMM_CART_X, 2, &
-dims, dummy_periods, dummy_coords, ierror)
-if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_CART_GET")
 
 ! for c2r/r2c interface:
 ! if in physical space, a real array is of size: nx*ny*nz
