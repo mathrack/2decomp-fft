@@ -130,7 +130,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%xsz(1), decomp%xsz(2), decomp%xsz(3))
+    call c2c_1m_3d(inout, isign, decomp%xsz(1), decomp%xsz(2), decomp%xsz(3))
 
   end subroutine c2c_1m_x_3d
 
@@ -142,7 +142,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3))
 
   end subroutine c2c_1m_x_2d
 
@@ -155,7 +155,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%ysz(1), decomp%ysz(2), decomp%ysz(3))
+    call c2c_1m_3d(inout, isign, decomp%ysz(1), decomp%ysz(2), decomp%ysz(3))
 
   end subroutine c2c_1m_y_3d
 
@@ -167,7 +167,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3))
 
   end subroutine c2c_1m_y_2d
 
@@ -180,7 +180,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%zsz(1), decomp%zsz(2), decomp%zsz(3))
+    call c2c_1m_3d(inout, isign, decomp%zsz(1), decomp%zsz(2), decomp%zsz(3))
 
   end subroutine c2c_1m_z_3d
 
@@ -192,7 +192,7 @@ module decomp_2d_fft
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3))
 
   end subroutine c2c_1m_z_2d
 

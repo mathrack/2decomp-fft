@@ -35,9 +35,9 @@ TYPE(DECOMP_INFO), save, public :: sp  ! spectral space
 complex(mytype), pointer, save, dimension(:,:,:) :: wk2_c2c, wk2_r2c
 complex(mytype), pointer, save, dimension(:,:) :: wk2_c2c_2d, wk2_r2c_2d
 integer, save:: wk2_c2c_win, wk2_r2c_win
-complex(mytype), pointer, save, dimension(:,:,:) :: wk13
-complex(mytype), pointer, save, dimension(:,:) :: wk13_2d
-integer, save :: wk13_win
+complex(mytype), pointer, dimension(:,:,:) :: wk13
+complex(mytype), pointer, dimension(:,:) :: wk13_2d
+integer :: wk13_win
 
 public :: decomp_2d_fft_init, decomp_2d_fft_3d, &
 decomp_2d_fft_finalize, decomp_2d_fft_get_size
@@ -54,11 +54,6 @@ interface decomp_2d_fft_3d
 module procedure fft_3d_c2c
 module procedure fft_3d_r2c
 module procedure fft_3d_c2r
-end interface
-
-interface c2c_1m
-module procedure c2c_1m_3d
-module procedure c2c_1m_2d
 end interface
 
 interface c2c_1m_x
