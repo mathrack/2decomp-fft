@@ -36,7 +36,7 @@ module decomp_2d_fft
 
     integer :: cbuf_size
 
-    if (nrank==0) then
+    if (nrank==0 .and. nrank_loc<=0) then
        write(*,*) ' '
        write(*,*) '***** Using the generic FFT engine *****'
        write(*,*) ' '
