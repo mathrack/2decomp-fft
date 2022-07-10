@@ -159,6 +159,7 @@ module decomp_2d
 
   ! public user routines
   public :: decomp_2d_init, decomp_2d_finalize, &
+       decomp_2d_win_fence, decomp_2d_win_free, &
        transpose_x_to_y, transpose_y_to_z, &
        transpose_z_to_y, transpose_y_to_x, &
        decomp_info_init, decomp_info_finalize, partition, &
@@ -253,6 +254,14 @@ module decomp_2d
         integer, intent(in) :: io_unit
         character(len=*), intent(in) :: d2dname
      end subroutine decomp_info_print
+
+     module subroutine decomp_2d_win_fence(win)
+        integer, intent(in) :: win
+     end subroutine decomp_2d_win_fence
+
+     module subroutine decomp_2d_win_free(win)    
+        integer, intent(in) :: win
+     end subroutine decomp_2d_win_free
 
   end interface
 

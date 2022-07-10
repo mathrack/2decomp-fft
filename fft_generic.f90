@@ -96,14 +96,14 @@ module decomp_2d_fft
 
   end subroutine c2c_1m_3d
 
-  subroutine c2c_1m_2d(inout, isign, n1, n2)
+  subroutine c2c_1m_2d(inout, isign, n1, n2, win)
 
     !$acc routine(spcfft) seq
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign, n1, n2
+    integer, intent(IN) :: isign, n1, n2, win
 
     integer :: i,j
 
@@ -118,6 +118,8 @@ module decomp_2d_fft
        end do
     end do
     !$acc end parallel loop
+
+    call decomp_2d_win_fence(win)
 
   end subroutine c2c_1m_2d
 
@@ -134,15 +136,15 @@ module decomp_2d_fft
 
   end subroutine c2c_1m_x_3d
 
-  subroutine c2c_1m_x_2d(inout, isign, decomp)
+  subroutine c2c_1m_x_2d(inout, isign, decomp, win)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign
+    integer, intent(IN) :: isign, win
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m_2d(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3), win)
 
   end subroutine c2c_1m_x_2d
 
@@ -159,15 +161,15 @@ module decomp_2d_fft
 
   end subroutine c2c_1m_y_3d
 
-  subroutine c2c_1m_y_2d(inout, isign, decomp)
+  subroutine c2c_1m_y_2d(inout, isign, decomp, win)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign
+    integer, intent(IN) :: isign, win
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m_2d(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3), win)
 
   end subroutine c2c_1m_y_2d
 
@@ -184,15 +186,15 @@ module decomp_2d_fft
 
   end subroutine c2c_1m_z_3d
 
-  subroutine c2c_1m_z_2d(inout, isign, decomp)
+  subroutine c2c_1m_z_2d(inout, isign, decomp, win)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign
+    integer, intent(IN) :: isign, win
     TYPE(DECOMP_INFO), intent(IN) :: decomp
 
-    call c2c_1m_2d(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3), win)
 
   end subroutine c2c_1m_z_2d
 
@@ -236,7 +238,7 @@ module decomp_2d_fft
 
   end subroutine r2c_1m_x_3d
 
-  subroutine r2c_1m_x_2d(input, output)
+  subroutine r2c_1m_x_2d(input, output, win)
 
     !$acc routine(spcfft) seq
 
@@ -244,6 +246,7 @@ module decomp_2d_fft
 
     real(mytype), dimension(:,:), intent(IN)  ::  input
     complex(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in) :: win
 
     integer :: i,j, s1,s2, d1
 
@@ -268,6 +271,8 @@ module decomp_2d_fft
     end do
     !$acc end parallel loop
 
+    call decomp_2d_win_fence(win)
+
   end subroutine r2c_1m_x_2d
 
   ! r2c transform, multiple 1D FFTs in z direction
@@ -282,14 +287,15 @@ module decomp_2d_fft
 
   end subroutine r2c_1m_z_3d
 
-  subroutine r2c_1m_z_2d(input, output)
+  subroutine r2c_1m_z_2d(input, output, win)
 
     implicit none
 
     real(mytype), dimension(:,:), intent(IN)  ::  input
     complex(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in) :: win
 
-    call r2c_1m_x(input, output)
+    call r2c_1m_x(input, output, win)
 
   end subroutine r2c_1m_z_2d
 
@@ -340,7 +346,7 @@ module decomp_2d_fft
 
   end subroutine c2r_1m_x_3d
 
-  subroutine c2r_1m_x_2d(input, output)
+  subroutine c2r_1m_x_2d(input, output, win)
 
     !$acc routine(spcfft) seq
 
@@ -348,6 +354,7 @@ module decomp_2d_fft
 
     complex(mytype), dimension(:,:), intent(IN)  ::  input
     real(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in) :: win
 
     integer :: i,j, d1,d2
 
@@ -379,6 +386,8 @@ module decomp_2d_fft
     end do
     !$acc end parallel loop
 
+    call decomp_2d_win_fence(win)
+
   end subroutine c2r_1m_x_2d
 
   ! c2r transform, multiple 1D FFTs in z direction
@@ -393,14 +402,15 @@ module decomp_2d_fft
 
   end subroutine c2r_1m_z_3d
 
-  subroutine c2r_1m_z_2d(input, output)
+  subroutine c2r_1m_z_2d(input, output, win)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(IN)  ::  input
     real(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in) :: win
 
-    call c2r_1m_x(input, output)
+    call c2r_1m_x(input, output, win)
 
   end subroutine c2r_1m_z_2d
 
