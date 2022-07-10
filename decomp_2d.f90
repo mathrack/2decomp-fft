@@ -896,7 +896,7 @@ contains
     TYPE(DECOMP_INFO), intent(INOUT) :: decomp
 
     ! If MPI3 shared memory and rank is not local master
-    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
+    if (d2d_intranode .and. nrank_loc > 0) return
 
     if (allocated(decomp%x1dist)) deallocate(decomp%x1dist)
     if (allocated(decomp%y1dist)) deallocate(decomp%y1dist)
