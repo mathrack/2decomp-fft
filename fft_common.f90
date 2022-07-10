@@ -33,7 +33,11 @@ TYPE(DECOMP_INFO), save :: sp  ! spectral space
 ! Workspace to store the intermediate Y-pencil data
 ! *** TODO: investigate how to use only one workspace array
 complex(mytype), pointer, dimension(:,:,:) :: wk2_c2c, wk2_r2c
-complex(mytype), pointer, dimension(:,:,:) :: wk13
+complex(mytype), pointer, dimension(:,:) :: wk2_c2c_2d, wk2_r2c_2d
+integer :: wk2_c2c_win, wk2_r2c_win
+complex(mytype), pointer, save, dimension(:,:,:) :: wk13
+complex(mytype), pointer, save, dimension(:,:) :: wk13_2d
+integer, save :: wk13_win
 
 public :: decomp_2d_fft_init, decomp_2d_fft_3d, &
 decomp_2d_fft_finalize, decomp_2d_fft_get_size
@@ -154,6 +158,15 @@ else if (format==PHYSICAL_IN_Z) then
 call decomp_info_init(nx, ny, nz/2+1, sp)
 end if
 
+if (d2d_intranode) then
+call alloc_y(wk2_c2c, var2d=wk2_c2c_2d, opt_decomp=ph, win=wk2_c2c_win)
+call alloc_y(wk2_r2c, var2d=wk2_r2c_2d, opt_decomp=sp, win=wk2_r2c_win)
+if (format==PHYSICAL_IN_X) then
+call alloc_x(wk13, var2d=wk13_2d, opt_decomp=sp, win=wk13_win)
+else if (format==PHYSICAL_IN_Z) then
+call alloc_z(wk13, var2d=wk13_2d, opt_decomp=sp, win=wk13_win)
+end if
+else
 call alloc_y(wk2_c2c, opt_decomp=ph)
 call alloc_y(wk2_r2c, opt_decomp=sp)
 if (format==PHYSICAL_IN_X) then
@@ -161,6 +174,7 @@ call alloc_x(wk13, opt_decomp=sp)
 else if (format==PHYSICAL_IN_Z) then
 call alloc_z(wk13, opt_decomp=sp)
 end if
+endif
 
 call init_fft_engine
 
@@ -177,12 +191,25 @@ subroutine decomp_2d_fft_finalize
 
 implicit none
 
+integer :: ierror
+
 call decomp_info_finalize(ph)
 call decomp_info_finalize(sp)
 
 if (associated(wk2_c2c)) nullify(wk2_c2c)
 if (associated(wk2_r2c)) nullify(wk2_r2c)
 if (associated(wk13)) nullify(wk13)
+if (associated(wk2_c2c_2d)) nullify(wk2_c2c_2d)
+if (associated(wk2_r2c_2d)) nullify(wk2_r2c_2d)
+if (associated(wk13_2d)) nullify(wk13_2d)
+if (d2d_intranode) then
+   call MPI_WIN_FREE(wk2_c2c_win, ierror)
+   if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FREE")
+   call MPI_WIN_FREE(wk2_r2c_win, ierror)
+   if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FREE")
+   call MPI_WIN_FREE(wk13_win, ierror)
+   if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FREE")
+endif
 
 call finalize_fft_engine
 

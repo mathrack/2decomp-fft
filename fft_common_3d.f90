@@ -15,46 +15,89 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 3D FFT - complex to complex
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine fft_3d_c2c(in, out, isign)
+subroutine fft_3d_c2c(in, out, isign, in_2d, out_2d, out_win)
 
 implicit none
 
 complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in
-complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: out
+complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out
 integer, intent(IN) :: isign
+complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: in_2d
+complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: out_2d
+integer, intent(in), optional :: out_win
 
-integer :: i, j, k
+integer :: i, j, k, ierror
 
 #ifndef OVERWRITE
+integer :: wk1_win
 complex(mytype), pointer, dimension(:,:,:) :: wk1
+complex(mytype), pointer, dimension(:,:) :: wk1_2d
 #endif
+
+! Safety check
+if (d2d_intranode) then
+   if (.not.present(in_2d).or..not.present(out_2d).or..not.present(out_win)) &
+      call decomp_2d_abort(__FILE__, __LINE__, 0, "Incorrect arguments")
+endif
 
 if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_FORWARD .OR.  &
 format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
 
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
+if (d2d_intranode) then
+call c2c_1m_x(in_2d,isign,ph)
+else
 call c2c_1m_x(in,isign,ph)
+endif
 #else
-allocate (wk1(ph%xsz(1),ph%xsz(2),ph%xsz(3)))
+if (d2d_intranode) then
+call alloc_x(wk1, var2d=wk1_2d, win=wk1_win)
+do concurrent (k=1:ph%xsz_loc(3), i=1:ph%xsz_loc(1))
+wk1_2d(i,k) = in_2d(i,k)
+end do
+call c2c_1m_x(wk1_2d,isign,ph)
+else
+call alloc_x(wk1)
 do concurrent (k=1:ph%xsz(3), j=1:ph%xsz(2), i=1:ph%xsz(1))
 wk1(i,j,k) = in(i,j,k)
 end do
 call c2c_1m_x(wk1,isign,ph)
+endif
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk1_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+endif
 #ifdef OVERWRITE
 call transpose_x_to_y(in,wk2_c2c,ph)
 #else
 call transpose_x_to_y(wk1,wk2_c2c,ph)
 #endif
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk2_c2c_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+call c2c_1m_y(wk2_c2c_2d,isign,ph)
+else
 call c2c_1m_y(wk2_c2c,isign,ph)
+endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk2_c2c_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+endif
 call transpose_y_to_z(wk2_c2c,out,ph)
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, out_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+call c2c_1m_z(out_2d,isign,ph)
+else
 call c2c_1m_z(out,isign,ph)
+endif
 
 else if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_BACKWARD &
 .OR. & 
@@ -62,32 +105,69 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_FORWARD) then
 
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
+if (d2d_intranode) then
+call c2c_1m_z(in_2d,isign,ph)
+else
 call c2c_1m_z(in,isign,ph)
+endif
 #else
-allocate (wk1(ph%zsz(1),ph%zsz(2),ph%zsz(3)))
+if (d2d_intranode) then
+call alloc_z(wk1, var2d=wk1_2d, win=wk1_win)
+do concurrent (k=1:ph%zsz_loc(3), i=1:ph%zsz_loc(1))
+wk1_2d(i,k) = in_2d(i,k)
+end do
+call c2c_1m_z(wk1_2d,isign,ph)
+else
+call alloc_z(wk1)
 do concurrent (k=1:ph%zsz(3), j=1:ph%zsz(2), i=1:ph%zsz(1))
 wk1(i,j,k) = in(i,j,k)
 end do
 call c2c_1m_z(wk1,isign,ph)
+endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk1_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+endif
 #ifdef OVERWRITE
 call transpose_z_to_y(in,wk2_c2c,ph)
 #else
 call transpose_z_to_y(wk1,wk2_c2c,ph)
 #endif
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk2_c2c_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+call c2c_1m_y(wk2_c2c_2d,isign,ph)
+else
 call c2c_1m_y(wk2_c2c,isign,ph)
+endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk2_c2c_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+endif
 call transpose_y_to_x(wk2_c2c,out,ph)
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, out_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+call c2c_1m_x(out_2d,isign,ph)
+else
 call c2c_1m_x(out,isign,ph)
+endif
 
 end if
 
 #ifndef OVERWRITE
 ! Free memory
 if (associated(wk1)) nullify(wk1)
+if (associated(wk1_2d)) nullify(wk1_2d)
+if (d2d_intranode) then
+   call MPI_WIN_FREE(wk1_win, ierror)
+   if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FREE")
+endif
 #endif
 
 return
