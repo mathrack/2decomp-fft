@@ -92,7 +92,7 @@ integer, intent(IN) :: nx, ny, nz
 
 logical, dimension(2) :: dummy_periods
 integer, dimension(2) :: dummy_coords
-integer :: status, errorcode, ierror
+integer :: errorcode, ierror
 
 if (initialised) then
 errorcode = 4
@@ -123,18 +123,12 @@ else if (format==PHYSICAL_IN_Z) then
 call decomp_info_init(nx, ny, nz/2+1, sp)
 end if
 
-allocate(wk2_c2c(ph%ysz(1),ph%ysz(2),ph%ysz(3)), STAT=status)
-allocate(wk2_r2c(sp%ysz(1),sp%ysz(2),sp%ysz(3)), STAT=status)
+call alloc_y(wk2_c2c, opt_decomp=ph)
+call alloc_y(wk2_r2c, opt_decomp=sp)
 if (format==PHYSICAL_IN_X) then
-allocate(wk13(sp%xsz(1),sp%xsz(2),sp%xsz(3)), STAT=status)
+call alloc_x(wk13, opt_decomp=sp)
 else if (format==PHYSICAL_IN_Z) then
-allocate(wk13(sp%zsz(1),sp%zsz(2),sp%zsz(3)), STAT=status)
-end if
-if (status /= 0) then
-errorcode = 3
-call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-'Out of memory when initialising FFT')
-end if
+call alloc_z(wk13, opt_decomp=sp)
 
 call init_fft_engine
 
