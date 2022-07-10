@@ -15,7 +15,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 3D FFT - complex to complex
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine fft_3d_c2c(in, out, isign, in_2d, out_2d, out_win)
+subroutine fft_3d_c2c(in, out, isign, in_2d, out_2d, in_win, out_win)
 
 implicit none
 
@@ -24,7 +24,7 @@ complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out
 integer, intent(IN) :: isign
 complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: in_2d
 complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: out_2d
-integer, intent(in), optional :: out_win
+integer, intent(in), optional :: in_win, out_win
 
 integer :: i, j, k, ierror
 
@@ -36,7 +36,8 @@ complex(mytype), pointer, dimension(:,:) :: wk1_2d
 
 ! Safety check
 if (d2d_intranode) then
-   if (.not.present(in_2d).or..not.present(out_2d).or..not.present(out_win)) &
+   if (.not.present(in_2d) .or. .not.present(out_2d) .or. &
+       .not.present(in_win) .or. .not.present(out_win)) &
       call decomp_2d_abort(__FILE__, __LINE__, 0, "Incorrect arguments")
 endif
 
@@ -68,13 +69,17 @@ endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 
+#ifdef OVERWRITE
 if (d2d_intranode) then
-call MPI_WIN_FENCE(0, wk1_win, ierror)
+call MPI_WIN_FENCE(0, in_win, ierror)
 if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
 endif
-#ifdef OVERWRITE
 call transpose_x_to_y(in,wk2_c2c,ph)
 #else
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, wk1_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")                   
+endif
 call transpose_x_to_y(wk1,wk2_c2c,ph)
 #endif
 if (d2d_intranode) then
@@ -127,13 +132,17 @@ endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
+#ifdef OVERWRITE
+if (d2d_intranode) then
+call MPI_WIN_FENCE(0, in_win, ierror)
+if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
+endif
+call transpose_z_to_y(in,wk2_c2c,ph)
+#else
 if (d2d_intranode) then
 call MPI_WIN_FENCE(0, wk1_win, ierror)
 if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_FENCE")
 endif
-#ifdef OVERWRITE
-call transpose_z_to_y(in,wk2_c2c,ph)
-#else
 call transpose_z_to_y(wk1,wk2_c2c,ph)
 #endif
 if (d2d_intranode) then
