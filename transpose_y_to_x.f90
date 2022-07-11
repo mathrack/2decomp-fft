@@ -194,7 +194,7 @@
     integer :: istat
 #endif
 
-    integer :: i,j,k, m,i1,i2,pos
+    integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
        if (m==0) then 
@@ -204,6 +204,7 @@
           i1 = i2+1
           i2 = i1+dist(m)-1
        end if
+       i3 = i2 - i1 + 1
 
 #ifdef EVEN
        pos = m * decomp%y1count + 1
@@ -215,10 +216,9 @@
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
        do k=1,n3
-          do j=i1,i2
-             do i=1,n2
-                out(pos) = in(j,i,k)
-                pos = pos + 1
+          do i=1,n2
+             do j=i1,i2
+                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in(j,i,k)
              end do
           end do
        end do
@@ -244,7 +244,7 @@
     integer :: istat
 #endif
 
-    integer :: i,j,k, m,i1,i2,pos
+    integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
        if (m==0) then 
@@ -254,6 +254,7 @@
           i1 = i2+1
           i2 = i1+dist(m)-1
        end if
+       i3 = i2 - i1 + 1
 
 #ifdef EVEN
        pos = m * decomp%y1count + 1
@@ -265,10 +266,9 @@
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
        do k=1,n3
-          do j=i1,i2
-             do i=1,n2
-                out(pos) = in(j,i,k)
-                pos = pos + 1
+          do i=1,n2
+             do j=i1,i2
+                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in(j,i,k)
              end do
           end do
        end do
@@ -294,7 +294,7 @@
     integer :: istat
 #endif
 
-    integer :: i,j,k, m,i1,i2, pos
+    integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
        if (m==0) then
@@ -304,6 +304,7 @@
           i1 = i2+1
           i2 = i1+dist(m)-1
        end if
+       i3 = i2 - i1 + 1
 
 #ifdef EVEN
        pos = m * decomp%x1count + 1
@@ -317,8 +318,7 @@
        do k=1,n3
           do j=1,n2
              do i=i1,i2
-                out(i,j,k) = in(pos)
-                pos = pos + 1
+                out(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
              end do
           end do
        end do
@@ -344,7 +344,7 @@
     integer :: istat
 #endif
 
-    integer :: i,j,k, m,i1,i2, pos
+    integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
        if (m==0) then
@@ -354,6 +354,7 @@
           i1 = i2+1
           i2 = i1+dist(m)-1
        end if
+       i3 = i2 - i1 + 1
 
 #ifdef EVEN
        pos = m * decomp%x1count + 1
@@ -367,8 +368,7 @@
        do k=1,n3
           do j=1,n2
              do i=i1,i2
-                out(i,j,k) = in(pos)
-                pos = pos + 1
+                out(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
              end do
           end do
        end do
