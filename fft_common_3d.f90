@@ -47,19 +47,17 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_win)
-call c2c_1m_x(in_2d,isign,ph,in_win)
+call c2c_1m_x(in_2d,isign,ph)
 else
 call c2c_1m_x(in,isign,ph)
 endif
 #else
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_win)
 call alloc_x(wk1, var2d=wk1_2d, win=wk1_win)
 do concurrent (k=1:ph%xsz_loc(3), i=1:ph%xsz_loc(1))
 wk1_2d(i,k) = in_2d(i,k)
 end do
-call c2c_1m_x(wk1_2d,isign,ph,wk1_win)
+call c2c_1m_x(wk1_2d,isign,ph)
 else
 call alloc_x(wk1)
 do concurrent (k=1:ph%xsz(3), j=1:ph%xsz(2), i=1:ph%xsz(1))
@@ -72,22 +70,20 @@ endif
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 
 #ifdef OVERWRITE
-call transpose_x_to_y(in,wk2_c2c,ph)
+call transpose_x_to_y(in,wk2_c2c,ph,in_win,wk2_c2c_win)
 #else
-call transpose_x_to_y(wk1,wk2_c2c,ph)
+call transpose_x_to_y(wk1,wk2_c2c,ph,wk1_win,wk2_c2c_win)
 #endif
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_c2c_win)
-call c2c_1m_y(wk2_c2c_2d,isign,ph,wk2_c2c_win)
+call c2c_1m_y(wk2_c2c_2d,isign,ph)
 else
 call c2c_1m_y(wk2_c2c,isign,ph)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_c2c,out,ph)
+call transpose_y_to_z(wk2_c2c,out,ph,wk2_c2c_win,out_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(out_win)
-call c2c_1m_z(out_2d,isign,ph,out_win)
+call c2c_1m_z(out_2d,isign,ph)
 else
 call c2c_1m_z(out,isign,ph)
 endif
@@ -99,19 +95,17 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_FORWARD) then
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_win)
-call c2c_1m_z(in_2d,isign,ph,in_win)
+call c2c_1m_z(in_2d,isign,ph)
 else
 call c2c_1m_z(in,isign,ph)
 endif
 #else
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_win)
 call alloc_z(wk1, var2d=wk1_2d, win=wk1_win)
 do concurrent (k=1:ph%zsz_loc(3), i=1:ph%zsz_loc(1))
 wk1_2d(i,k) = in_2d(i,k)
 end do
-call c2c_1m_z(wk1_2d,isign,ph,wk1_win)
+call c2c_1m_z(wk1_2d,isign,ph)
 else
 call alloc_z(wk1)
 do concurrent (k=1:ph%zsz(3), j=1:ph%zsz(2), i=1:ph%zsz(1))
@@ -123,22 +117,20 @@ endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_z_to_y(in,wk2_c2c,ph)
+call transpose_z_to_y(in,wk2_c2c,ph,in_win,wk2_c2c_win)
 #else
-call transpose_z_to_y(wk1,wk2_c2c,ph)
+call transpose_z_to_y(wk1,wk2_c2c,ph,wk1_win,wk2_c2c_win)
 #endif
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_c2c_win)
-call c2c_1m_y(wk2_c2c_2d,isign,ph,wk2_c2c_win)
+call c2c_1m_y(wk2_c2c_2d,isign,ph)
 else
 call c2c_1m_y(wk2_c2c,isign,ph)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_c2c,out,ph)
+call transpose_y_to_x(wk2_c2c,out,ph,wk2_c2c_win,out_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(out_win)
-call c2c_1m_x(out_2d,isign,ph,out_win)
+call c2c_1m_x(out_2d,isign,ph)
 else
 call c2c_1m_x(out,isign,ph)
 endif
@@ -180,26 +172,23 @@ if (format==PHYSICAL_IN_X) then
 
 ! ===== 1D FFTs in X =====
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_r_win)
-call r2c_1m_x(in_r_2d,wk13_2d,wk13_win)
+call r2c_1m_x(in_r_2d,wk13_2d)
 else
 call r2c_1m_x(in_r,wk13)
 endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
-call transpose_x_to_y(wk13,wk2_r2c,sp)
+call transpose_x_to_y(wk13,wk2_r2c,sp,wk13_win,wk2_r2c_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_r2c_win)
-call c2c_1m_y(wk2_r2c_2d,-1,sp,wk2_r2c_win)
+call c2c_1m_y(wk2_r2c_2d,-1,sp)
 else
 call c2c_1m_y(wk2_r2c,-1,sp)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_r2c,out_c,sp)
+call transpose_y_to_z(wk2_r2c,out_c,sp,wk2_r2c_win,out_c_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(out_c_win)
-call c2c_1m_z(out_c_2d,-1,sp,out_c_win)
+call c2c_1m_z(out_c_2d,-1,sp)
 else
 call c2c_1m_z(out_c,-1,sp)
 endif
@@ -208,26 +197,23 @@ else if (format==PHYSICAL_IN_Z) then
 
 ! ===== 1D FFTs in Z =====
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_r_win)
-call r2c_1m_z(in_r_2d,wk13_2d,wk13_win)
+call r2c_1m_z(in_r_2d,wk13_2d)
 else
 call r2c_1m_z(in_r,wk13)
 endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
-call transpose_z_to_y(wk13,wk2_r2c,sp)
+call transpose_z_to_y(wk13,wk2_r2c,sp,wk13_win,wk2_r2c_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_r2c_win)
-call c2c_1m_y(wk2_r2c_2d,-1,sp,wk2_r2c_win)
+call c2c_1m_y(wk2_r2c_2d,-1,sp)
 else
 call c2c_1m_y(wk2_r2c,-1,sp)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_r2c,out_c,sp)
+call transpose_y_to_x(wk2_r2c,out_c,sp,wk2_r2c_win,out_c_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(out_c_win)
-call c2c_1m_x(out_c_2d,-1,sp,out_c_win)
+call c2c_1m_x(out_c_2d,-1,sp)
 else
 call c2c_1m_x(out_c,-1,sp)
 endif
@@ -263,19 +249,17 @@ if (format==PHYSICAL_IN_X) then
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_c_win)
-call c2c_1m_z(in_c_2d,1,sp,in_c_win)
+call c2c_1m_z(in_c_2d,1,sp)
 else
 call c2c_1m_z(in_c,1,sp)
 endif
 #else
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_c_win)
 call alloc_z(wk1, var2d=wk1_2d, opt_decomp=sp, win=wk1_win)
 do concurrent (k=1:sp%zsz_loc(3), i=1:sp%zsz_loc(1))
 wk1_2d(i,k) = in_c_2d(i,k)
 end do
-call c2c_1m_z(wk1_2d,1,sp,wk1_win)
+call c2c_1m_z(wk1_2d,1,sp)
 else
 call alloc_z(wk1, opt_decomp=sp)
 do concurrent (k=1:sp%zsz(3), j=1:sp%zsz(2), i=1:sp%zsz(1))
@@ -287,22 +271,20 @@ endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_z_to_y(in_c,wk2_r2c,sp)
+call transpose_z_to_y(in_c,wk2_r2c,sp,in_c_win,wk2_r2c_win)
 #else
-call transpose_z_to_y(wk1,wk2_r2c,sp)
+call transpose_z_to_y(wk1,wk2_r2c,sp,wk1_win,wk2_r2c_win)
 #endif
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_r2c_win)
-call c2c_1m_y(wk2_r2c_2d,1,sp,wk2_r2c_win)
+call c2c_1m_y(wk2_r2c_2d,1,sp)
 else
 call c2c_1m_y(wk2_r2c,1,sp)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_r2c,wk13,sp)
+call transpose_y_to_x(wk2_r2c,wk13,sp,wk2_r2c_win,wk13_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk13_win)
-call c2r_1m_x(wk13_2d,out_r_2d,out_r_win)
+call c2r_1m_x(wk13_2d,out_r_2d)
 else
 call c2r_1m_x(wk13,out_r)
 endif
@@ -312,19 +294,17 @@ else if (format==PHYSICAL_IN_Z) then
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_c_win)
-call c2c_1m_x(in_c_2d,1,sp,in_c_win)
+call c2c_1m_x(in_c_2d,1,sp)
 else
 call c2c_1m_x(in_c,1,sp)
 endif
 #else
 if (d2d_intranode) then
-call decomp_2d_win_fence(in_c_win)
 call alloc_x(wk1, var2d=wk1_2d, opt_decomp=sp, win=wk1_win)
 do concurrent (k=1:sp%xsz_loc(3), i=1:sp%xsz_loc(1))
 wk1_2d(i,k) = in_c_2d(i,k)
 end do
-call c2c_1m_x(wk1_2d,1,sp,wk1_win)
+call c2c_1m_x(wk1_2d,1,sp)
 else
 call alloc_x(wk1, opt_decomp=sp)
 do concurrent (k=1:sp%xsz(3), j=1:sp%xsz(2), i=1:sp%xsz(1))
@@ -336,22 +316,20 @@ endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_x_to_y(in_c,wk2_r2c,sp)
+call transpose_x_to_y(in_c,wk2_r2c,sp,in_c_win,wk2_r2c_win)
 #else
-call transpose_x_to_y(wk1,wk2_r2c,sp)
+call transpose_x_to_y(wk1,wk2_r2c,sp,wk1_win,wk2_r2c_win)
 #endif
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk2_r2c_win)
-call c2c_1m_y(wk2_r2c_2d,1,sp,wk2_r2c_win)
+call c2c_1m_y(wk2_r2c_2d,1,sp)
 else
 call c2c_1m_y(wk2_r2c,1,sp)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_r2c,wk13,sp)
+call transpose_y_to_z(wk2_r2c,wk13,sp,wk2_r2c_win,wk13_win)
 if (d2d_intranode) then
-call decomp_2d_win_fence(wk13_win)
-call c2r_1m_z(wk13_2d,out_r_2d,out_r_win)
+call c2r_1m_z(wk13_2d,out_r_2d)
 else
 call c2r_1m_z(wk13,out_r)
 endif

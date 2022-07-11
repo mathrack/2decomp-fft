@@ -14,17 +14,92 @@ submodule(decomp_2d) d2d_wrapper
 
    implicit none
 
+   logical, parameter :: transpose_win_sync_with_fence = .true.
+
 contains
+
+   !
+   ! Windows sync. at the beginning of the transpose operation, reading part
+   !
+   module subroutine decomp_2d_win_transpose_start_reading(src_win)
+
+      implicit none
+
+      integer, intent(in) :: src_win
+
+      if (transpose_win_sync_with_fence) then
+         ! Basic sync. using mpi_win_fence
+         call decomp_2d_win_fence(src_win, MPI_MODE_NOPUT+MPI_MODE_NOSTORE)
+      else
+         ! Advanced sync. using post-start-complete-wait
+      endif
+
+   end subroutine decomp_2d_win_transpose_start_reading
+
+   !
+   ! Windows sync. during the transpose operation, reading part
+   !
+   module subroutine decomp_2d_win_transpose_stop_reading(src_win)
+
+      implicit none
+
+      integer, intent(in) :: src_win
+
+      if (transpose_win_sync_with_fence) then
+         ! Basic sync. using mpi_win_fence
+         call decomp_2d_win_fence(src_win, MPI_MODE_NOPUT+MPI_MODE_NOSTORE)
+      else
+         ! Advanced sync. using post-start-complete-wait
+      endif
+
+   end subroutine decomp_2d_win_transpose_stop_reading
+
+   !
+   ! Windows sync. during the transpose operation, writing part
+   !
+   module subroutine decomp_2d_win_transpose_start_writing(dst_win)
+
+      implicit none
+
+      integer, intent(in) :: dst_win
+
+      if (transpose_win_sync_with_fence) then
+         ! Basic sync. using mpi_win_fence
+         call decomp_2d_win_fence(dst_win)
+      else
+         ! Advanced sync. using post-start-complete-wait
+      endif
+
+   end subroutine decomp_2d_win_transpose_start_writing
+
+   !
+   ! Windows sync. at the end of the transpose operation, writing part
+   !
+   module subroutine decomp_2d_win_transpose_stop_writing(dst_win)
+
+      implicit none
+
+      integer, intent(in) :: dst_win
+
+      if (transpose_win_sync_with_fence) then
+         ! Basic sync. using mpi_win_fence
+         call decomp_2d_win_fence(dst_win)
+      else
+         ! Advanced sync. using post-start-complete-wait
+      endif
+
+   end subroutine decomp_2d_win_transpose_stop_writing
 
    !
    ! Fence the given MPI window
    !
-   module subroutine decomp_2d_win_fence(win)
+   module subroutine decomp_2d_win_fence(win, assert)
 
       implicit none
 
       ! Argument
       integer, intent(in) :: win
+      integer, intent(in), optional :: assert
 
       ! Local variable
       integer :: ierror
@@ -35,7 +110,11 @@ contains
       if (win == MPI_WIN_NULL) call decomp_2d_abort(-1,"Error")
 #endif
 
-      call MPI_WIN_FENCE(0, win, ierror)
+      if (present(assert)) then
+         call MPI_WIN_FENCE(assert, win, ierror)
+      else
+         call MPI_WIN_FENCE(0, win, ierror)
+      endif
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_WIN_FENCE")
 
    end subroutine decomp_2d_win_fence

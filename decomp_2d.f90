@@ -255,8 +255,25 @@ module decomp_2d
         character(len=*), intent(in) :: d2dname
      end subroutine decomp_info_print
 
-     module subroutine decomp_2d_win_fence(win)
+     module subroutine decomp_2d_win_transpose_start_reading(src_win)
+        integer, intent(in) :: src_win
+     end subroutine decomp_2d_win_transpose_start_reading
+
+     module subroutine decomp_2d_win_transpose_stop_reading(src_win)                                 
+        integer, intent(in) :: src_win                                                               
+     end subroutine decomp_2d_win_transpose_stop_reading
+
+     module subroutine decomp_2d_win_transpose_start_writing(dst_win)
+        integer, intent(in) :: dst_win
+     end subroutine decomp_2d_win_transpose_start_writing
+
+     module subroutine decomp_2d_win_transpose_stop_writing(dst_win)
+        integer, intent(in) :: dst_win
+     end subroutine decomp_2d_win_transpose_stop_writing
+
+     module subroutine decomp_2d_win_fence(win, assert)
         integer, intent(in) :: win
+        integer, intent(in), optional :: assert
      end subroutine decomp_2d_win_fence
 
      module subroutine decomp_2d_win_free(win)    

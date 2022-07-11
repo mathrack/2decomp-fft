@@ -11,13 +11,14 @@
 
 ! This file contains the routines that transpose data from Y to X pencil
 
-  subroutine transpose_y_to_x_real(src, dst, opt_decomp)
+  subroutine transpose_y_to_x_real(src, dst, opt_decomp, src_win, dst_win)
 
     implicit none
     
     real(mytype), dimension(:,:,:), pointer, intent(IN) :: src
     real(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+    integer, intent(in), optional :: src_win, dst_win
 
     TYPE(DECOMP_INFO) :: decomp
 
@@ -30,8 +31,15 @@
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
 
-    ! In case of MPI3 shared memory and proc is not local master                                     
-    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
+    ! In case of MPI3 shared memory
+    if (d2d_intranode.and.nrank_loc>0) then
+       ! Local master will read(write) from everybody at start(end)
+       call decomp_2d_win_transpose_start_reading(src_win)
+       call decomp_2d_win_transpose_stop_reading(src_win)
+       call decomp_2d_win_transpose_start_writing(dst_win)
+       call decomp_2d_win_transpose_stop_writing(dst_win)
+       return
+    endif
 
     if (present(opt_decomp)) then
        decomp = opt_decomp
@@ -46,6 +54,9 @@
     d2 = decomp%xsz(2)
     d3 = decomp%xsz(3)
 
+    ! In case of MPI3 shared memory, local master starts reading
+    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src_win)
+
     ! rearrange source array as send buffer
 #if defined(_GPU)
     call mem_split_yx_real(src, s1, s2, s3, work1_r_d, dims(1), &
@@ -54,6 +65,9 @@
     call mem_split_yx_real(src, s1, s2, s3, work1_r, dims(1), &
          decomp%y1dist, decomp)
 #endif
+
+    ! In case of MPI3 shared memory, local master is done reading
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src_win)
 
     ! transpose using MPI_ALLTOALL(V)
 #ifdef EVEN
@@ -87,6 +101,9 @@
 
 #endif
 
+    ! In case of MPI3 shared memory, local master starts writing
+    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst_win)
+
     ! rearrange receive buffer
 #if defined(_GPU)
     call mem_merge_yx_real(work2_r_d, d1, d2, d3, dst, dims(1), &
@@ -95,18 +112,22 @@
     call mem_merge_yx_real(work2_r, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
 #endif
-    
+
+    ! In case of MPI3 shared memory, local master is done writing
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst_win)
+
     return
   end subroutine transpose_y_to_x_real
 
 
-  subroutine transpose_y_to_x_complex(src, dst, opt_decomp)
+  subroutine transpose_y_to_x_complex(src, dst, opt_decomp, src_win, dst_win)
 
     implicit none
     
     complex(mytype), dimension(:,:,:), pointer, intent(IN) :: src
     complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+    integer, intent(in), optional :: src_win, dst_win
 
     TYPE(DECOMP_INFO) :: decomp
 
@@ -119,8 +140,15 @@
     integer :: s1,s2,s3,d1,d2,d3
     integer :: ierror
 
-    ! In case of MPI3 shared memory and proc is not local master                                     
-    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
+    ! In case of MPI3 shared memory
+    if (d2d_intranode.and.nrank_loc>0) then
+       ! Local master will read(write) from everybody at start(end)
+       call decomp_2d_win_transpose_start_reading(src_win)
+       call decomp_2d_win_transpose_stop_reading(src_win)
+       call decomp_2d_win_transpose_start_writing(dst_win)
+       call decomp_2d_win_transpose_stop_writing(dst_win)
+       return
+    endif
 
     if (present(opt_decomp)) then
        decomp = opt_decomp
@@ -134,7 +162,10 @@
     d1 = decomp%xsz(1)
     d2 = decomp%xsz(2)
     d3 = decomp%xsz(3)
-    
+ 
+    ! In case of MPI3 shared memory, local master starts reading
+    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src_win)
+
     ! rearrange source array as send buffer
 #if defined(_GPU)
     call mem_split_yx_complex(src, s1, s2, s3, work1_c_d, dims(1), &
@@ -143,7 +174,10 @@
     call mem_split_yx_complex(src, s1, s2, s3, work1_c, dims(1), &
          decomp%y1dist, decomp)
 #endif
-    
+
+    ! In case of MPI3 shared memory, local master is done reading
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src_win)
+
     ! transpose using MPI_ALLTOALL(V)
 #ifdef EVEN
     call MPI_ALLTOALL(work1_c, decomp%y1count, &
@@ -166,6 +200,9 @@
 
 #endif
 
+    ! In case of MPI3 shared memory, local master starts writing
+    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst_win)
+
     ! rearrange receive buffer
 #if defined(_GPU)
     call mem_merge_yx_complex(work2_c_d, d1, d2, d3, dst, dims(1), &
@@ -174,6 +211,9 @@
     call mem_merge_yx_complex(work2_c, d1, d2, d3, dst, dims(1), &
          decomp%x1dist, decomp)
 #endif
+
+    ! In case of MPI3 shared memory, local master is done writing
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst_win)
 
     return
   end subroutine transpose_y_to_x_complex
