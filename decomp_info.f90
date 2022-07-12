@@ -295,6 +295,20 @@ contains
      call MPI_BCAST(decomp%even, 1, MPI_LOGICAL, 0, DECOMP_2D_LOCALCOMM, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
 
+     if (nrank_loc>0) then
+        allocate(decomp%x1dist(0:dims(1)-1),decomp%y1dist(0:dims(1)-1))
+        allocate(decomp%y2dist(0:dims(2)-1),decomp%z2dist(0:dims(2)-1))
+     endif
+
+     call MPI_BCAST(decomp%x1dist, dims(1), MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%y1dist, dims(1), MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%y2dist, dims(2), MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(decomp%z2dist, dims(2), MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
   end subroutine decomp_info_init_local
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -305,9 +319,6 @@ contains
     implicit none
 
     TYPE(DECOMP_INFO), intent(INOUT) :: decomp
-
-    ! If MPI3 shared memory and rank is not local master
-    if (d2d_intranode .and. nrank_loc > 0) return
 
     if (allocated(decomp%x1dist)) deallocate(decomp%x1dist)
     if (allocated(decomp%y1dist)) deallocate(decomp%y1dist)

@@ -567,22 +567,6 @@ contains
      call MPI_BCAST(mytype_bytes, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
 
-     call MPI_BCAST(nx_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-     call MPI_BCAST(ny_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-     call MPI_BCAST(nz_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-
-     call MPI_BCAST(nrank, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-     call MPI_BCAST(nproc, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-     call MPI_BCAST(dims, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-     call MPI_BCAST(coord, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-
      call MPI_BCAST(xstart, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
      call MPI_BCAST(xend, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
@@ -614,6 +598,23 @@ contains
      implicit none
 
      integer :: ierror, TMP_COMM_CART
+
+
+     call MPI_BCAST(nx_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(ny_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(nz_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+
+     call MPI_BCAST(nrank, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(nproc, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(dims, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
+     call MPI_BCAST(coord, 2, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
 
      !
      ! Get local rank and comm size
