@@ -1,5 +1,6 @@
 file(GLOB files_decomp decomp_2d.f90
 	               log.f90
+		       wrapper.f90
                        glassman.f90)
 include_directories(${CMAKE_SOURCE_DIR}/decomp2d)
 
