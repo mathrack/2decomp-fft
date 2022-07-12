@@ -1,4 +1,5 @@
-file(GLOB files_decomp decomp_2d.f90
+file(GLOB files_decomp coarse.f90
+	               decomp_2d.f90
 	               decomp_info.f90
 	               log.f90
 		       wrapper.f90
