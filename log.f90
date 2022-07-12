@@ -10,6 +10,8 @@
 !
 !=======================================================================
 
+! This is the submodule dedicated to log subroutines
+
 submodule (decomp_2d) smod_log
 
   implicit none

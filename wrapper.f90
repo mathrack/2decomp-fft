@@ -10,6 +10,8 @@
 !
 !=======================================================================
 
+! This is the submodule dedicated to wrappers
+
 submodule(decomp_2d) smod_wrapper
 
    implicit none

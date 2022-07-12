@@ -10,7 +10,7 @@
 !
 !=======================================================================
 
-! This is the main 2D pencil decomposition module
+! This is the submodule dedicated to decomp_info objects
 
 submodule (decomp_2d) smod_decomp_info
 
