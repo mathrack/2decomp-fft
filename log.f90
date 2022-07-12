@@ -10,7 +10,7 @@
 !
 !=======================================================================
 
-submodule (decomp_2d) d2d_log
+submodule (decomp_2d) smod_log
 
   implicit none
 
@@ -210,4 +210,4 @@ submodule (decomp_2d) d2d_log
 
   end subroutine decomp_info_print
 
-end submodule d2d_log
+end submodule smod_log

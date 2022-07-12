@@ -10,7 +10,7 @@
 !
 !=======================================================================
 
-submodule(decomp_2d) d2d_wrapper
+submodule(decomp_2d) smod_wrapper
 
    implicit none
 
@@ -143,4 +143,4 @@ contains
 
    end subroutine decomp_2d_win_free
 
-end submodule d2d_wrapper
+end submodule smod_wrapper
