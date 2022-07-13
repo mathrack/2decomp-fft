@@ -29,7 +29,7 @@ contains
       integer, intent(inout) :: buf_size
 
       ! Local variables
-      integer :: ierror, status, errorcode
+      integer :: ierror
 
       ! Local master broadcast buf_size if needed
       if (d2d_intranode) then
@@ -40,58 +40,18 @@ contains
       if (buf_size <= decomp_buf_size) return
 
       decomp_buf_size = buf_size
-      call _buffer_free()
+      call smod_buffer_free()
 
 #if defined(_GPU)
-      allocate (work1_r_d(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work1_c_d(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work2_r_d(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work2_c_d(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
+      call smod_real_array_alloc(work1_r_d, buf_size)
+      call smod_cplx_array_alloc(work1_c_d, buf_size)
+      call smod_real_array_alloc(work2_r_d, buf_size)
+      call smod_cplx_array_alloc(work2_c_d, buf_size)
 #endif
-      allocate (work1_r(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work2_r(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work1_c(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
-      allocate (work2_c(buf_size), STAT=status)
-      if (status /= 0) then
-         errorcode = 2
-         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-                              'Out of memory when allocating 2DECOMP workspace')
-      end if
+      call smod_real_array_alloc(work1_r, buf_size)
+      call smod_cplx_array_alloc(work1_c, buf_size)
+      call smod_real_array_alloc(work2_r, buf_size)
+      call smod_cplx_array_alloc(work2_c, buf_size)
 
    end subroutine decomp_buffer_alloc
 
@@ -110,7 +70,7 @@ contains
 #endif
 
       decomp_buf_size = 0
-      call _buffer_free()
+      call smod_buffer_free()
 #if defined(_GPU)
 #if defined(_NCCL)
       nccl_stat = ncclCommDestroy(nccl_comm_2decomp)
@@ -120,9 +80,51 @@ contains
    end subroutine decomp_buffer_free
 
    !
+   ! Internal routine to allocate memory
+   !
+   module subroutine smod_real_array_alloc(array, buf_size)
+
+      implicit none
+
+      ! Arguments
+      real(mytype), dimension(:), allocatable, intent(out) :: array
+      integer, intent(in) :: buf_size
+
+      ! Local variables
+      integer :: status, errorcode
+
+      allocate (array(buf_size), STAT=status)
+      if (status /= 0) then
+         errorcode = 2
+         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
+                              'Out of memory when allocating 2DECOMP workspace')
+      end if
+
+   end subroutine smod_real_array_alloc
+   module subroutine smod_cplx_array_alloc(array, buf_size)
+
+      implicit none
+
+      ! Arguments
+      complex(mytype), dimension(:), allocatable, intent(out) :: array
+      integer, intent(in) :: buf_size
+
+      ! Local variables
+      integer :: status, errorcode
+
+      allocate (array(buf_size), STAT=status)
+      if (status /= 0) then
+         errorcode = 2
+         call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
+                              'Out of memory when allocating 2DECOMP workspace')
+      end if
+
+   end subroutine smod_cplx_array_alloc
+
+   !
    ! Internal routine to free the buffers
    !
-   module subroutine _buffer_free
+   module subroutine smod_buffer_free
 
       implicit none
 
@@ -137,6 +139,6 @@ contains
       if (allocated(work2_c_d)) deallocate (work2_c_d)
 #endif
 
-   end subroutine _buffer_free
+   end subroutine smod_buffer_free
 
 end submodule smod_buffer
