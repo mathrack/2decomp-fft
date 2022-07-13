@@ -14,7 +14,7 @@
 
 submodule(decomp_2d) smod_buffer
 
-  use, intrinsic :: iso_c_binding, only : c_loc, c_ptr, c_f_pointer
+   use, intrinsic :: iso_c_binding, only: c_loc, c_ptr, c_f_pointer
 
    implicit none
 
@@ -132,8 +132,8 @@ contains
             winsize = buf_size
          else
             winsize = 0
-         endif
-         call MPI_WIN_ALLOCATE_SHARED(winsize * mytype_bytes, &
+         end if
+         call MPI_WIN_ALLOCATE_SHARED(winsize*mytype_bytes, &
                                       mytype_bytes, &
                                       MPI_INFO_NULL, &
                                       DECOMP_2D_LOCALCOMM, &
@@ -176,9 +176,9 @@ contains
             winsize = buf_size
          else
             winsize = 0
-         endif 
-         call MPI_WIN_ALLOCATE_SHARED(winsize * mytype_bytes * 2, &
-                                      mytype_bytes * 2, &
+         end if
+         call MPI_WIN_ALLOCATE_SHARED(winsize*mytype_bytes*2, &
+                                      mytype_bytes*2, &
                                       MPI_INFO_NULL, &
                                       DECOMP_2D_LOCALCOMM, &
                                       baseptr, &
@@ -213,32 +213,32 @@ contains
       if (work1_c_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_c_win)
       if (work2_c_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_c_win)
       if (d2d_intranode) then
-      if (associated(work1_r)) nullify (work1_r)
-      if (associated(work2_r)) nullify (work2_r)
-      if (associated(work1_c)) nullify (work1_c)
-      if (associated(work2_c)) nullify (work2_c)
+         if (associated(work1_r)) nullify (work1_r)
+         if (associated(work2_r)) nullify (work2_r)
+         if (associated(work1_c)) nullify (work1_c)
+         if (associated(work2_c)) nullify (work2_c)
       else
-      if (associated(work1_r)) deallocate (work1_r)
-      if (associated(work2_r)) deallocate (work2_r)
-      if (associated(work1_c)) deallocate (work1_c)
-      if (associated(work2_c)) deallocate (work2_c)
-      endif
+         if (associated(work1_r)) deallocate (work1_r)
+         if (associated(work2_r)) deallocate (work2_r)
+         if (associated(work1_c)) deallocate (work1_c)
+         if (associated(work2_c)) deallocate (work2_c)
+      end if
 #if defined(_GPU)
       if (work1_r_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_r_d_win)
       if (work2_r_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_r_d_win)
       if (work1_c_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_c_d_win)
       if (work2_c_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_c_d_win)
       if (d2d_intranode) then
-      if (associated(work1_r_d)) nullify (work1_r_d)
-      if (associated(work2_r_d)) nullify (work2_r_d)
-      if (associated(work1_c_d)) nullify (work1_c_d)
-      if (associated(work2_c_d)) nullify (work2_c_d)
+         if (associated(work1_r_d)) nullify (work1_r_d)
+         if (associated(work2_r_d)) nullify (work2_r_d)
+         if (associated(work1_c_d)) nullify (work1_c_d)
+         if (associated(work2_c_d)) nullify (work2_c_d)
       else
-      if (associated(work1_r_d)) deallocate (work1_r_d)
-      if (associated(work2_r_d)) deallocate (work2_r_d)
-      if (associated(work1_c_d)) deallocate (work1_c_d)
-      if (associated(work2_c_d)) deallocate (work2_c_d)
-      endif
+         if (associated(work1_r_d)) deallocate (work1_r_d)
+         if (associated(work2_r_d)) deallocate (work2_r_d)
+         if (associated(work1_c_d)) deallocate (work1_c_d)
+         if (associated(work2_c_d)) deallocate (work2_c_d)
+      end if
 #endif
 
    end subroutine smod_buffer_free
