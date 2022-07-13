@@ -339,7 +339,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), i2-i1+1, in(i1,1,1), n1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(in%var2d)) then
+       if (d2d_intranode .and. associated(in%cvar2d)) then
           do k = 1, decomp%xsz_loc(3)
              do i = i1, i2
                 out(decomp%intramap_split(1,i,k)) = in%cvar2d(i,k)
@@ -459,7 +459,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(1,i1,1), n1*n2, in(pos), n1*(i2-i1+1), n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(out%var2d)) then
+       if (d2d_intranode .and. associated(out%cvar2d)) then
           do k = 1, decomp%ysz_loc(3)
              do j = i1, i2
                 out%cvar2d(j,k) = in(decomp%intramap_merge(1,j,k))
