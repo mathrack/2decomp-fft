@@ -164,7 +164,7 @@ submodule (decomp_2d) smod_alloc
     win = MPI_WIN_NULL
     call MPI_WIN_ALLOCATE_SHARED(winsize * mytype_bytes, &
                                  mytype_bytes, &
-                                 MPI_INFO_NULL, &
+                                 info, &
                                  DECOMP_2D_LOCALCOMM, &
                                  baseptr, &
                                  win, &

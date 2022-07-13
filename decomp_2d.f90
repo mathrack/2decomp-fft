@@ -150,10 +150,12 @@ module decomp_2d
 
   ! These are the buffers used by MPI_ALLTOALL(V) calls
   integer, save :: decomp_buf_size = 0
+  integer, save :: work1_r_win, work2_r_win, work1_c_win, work2_c_win
   real(mytype), pointer, dimension(:) :: work1_r, work2_r
   complex(mytype), pointer, dimension(:) :: work1_c, work2_c
 
 #if defined(_GPU)
+  integer, save :: work1_r_d_win, work2_r_d_win, work1_c_d_win, work2_c_d_win
   real(mytype), pointer, dimension(:), device :: work1_r_d, work2_r_d
   complex(mytype), pointer, dimension(:), device :: work1_c_d, work2_c_d
 
@@ -318,6 +320,9 @@ module decomp_2d
         integer, intent(inout) :: buf_size
      end subroutine decomp_buffer_alloc
 
+     module subroutine decomp_buffer_init
+     end subroutine decomp_buffer_init
+
      module subroutine decomp_buffer_free
      end subroutine decomp_buffer_free
 
@@ -474,6 +479,8 @@ contains
        DECOMP_2D_COMM = MPI_COMM_WORLD
     endif
 
+    call decomp_buffer_init()
+
     if (DECOMP_2D_COMM /= MPI_COMM_WORLD .and. present(local_comm)) then
        ! MPI3 shared memory
        d2d_intranode = .true.
@@ -501,12 +508,17 @@ contains
     endif
 
     !
-    ! Get global rank and comm size
+    ! Get global rank and comm size and mytype_bytes
     !
     call MPI_COMM_RANK(DECOMP_2D_COMM, nrank, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_RANK")
     call MPI_COMM_SIZE(DECOMP_2D_COMM, nproc, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_SIZE")
+    ! determine the number of bytes per float number
+    ! do not use 'mytype' which is compiler dependent
+    ! also possible to use inquire(iolength=...) 
+    call MPI_TYPE_SIZE(real_type,mytype_bytes,ierror)
+    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_TYPE_SIZE")
 
     nx_global = nx
     ny_global = ny
@@ -596,12 +608,6 @@ contains
     ysize  = decomp_main%ysz
     zsize  = decomp_main%zsz
 
-    ! determine the number of bytes per float number
-    ! do not use 'mytype' which is compiler dependent
-    ! also possible to use inquire(iolength=...) 
-    call MPI_TYPE_SIZE(real_type,mytype_bytes,ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_TYPE_SIZE")
-
 #ifdef EVEN
     if (nrank==0.and.nrank_loc<=0) write(*,*) 'Padded ALLTOALL optimisation on'
 #endif 
@@ -664,9 +670,6 @@ contains
      ! Broadcast
      !
 
-     call MPI_BCAST(mytype_bytes, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
-     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
-
      call MPI_BCAST(xstart, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
      call MPI_BCAST(xend, 3, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
@@ -699,7 +702,6 @@ contains
 
      integer :: ierror, TMP_COMM_CART
 
-
      call MPI_BCAST(nx_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
      call MPI_BCAST(ny_global, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
@@ -717,11 +719,13 @@ contains
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
 
      !
-     ! Get local rank and comm size
+     ! Get local rank and comm size and mytype_bytes
      call MPI_COMM_RANK(DECOMP_2D_LOCALCOMM, nrank_loc, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_RANK")
      call MPI_COMM_SIZE(DECOMP_2D_LOCALCOMM, nproc_loc, ierror)
      if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_COMM_SIZE")
+     call MPI_BCAST(mytype_bytes, 1, MPI_INT, 0, DECOMP_2D_LOCALCOMM, ierror)
+     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_BCAST")
      !
      ! Build a 1D CPU grid (arrays dims_loc and coord_loc)
      dims_loc(1) = 1
