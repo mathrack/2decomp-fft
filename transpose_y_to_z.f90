@@ -36,16 +36,6 @@
        call decomp_2d_abort(__FILE__, __LINE__, -1, "Impossible transpose operation")
 #endif
 
-    ! In case of MPI3 shared memory
-    if (d2d_intranode.and.nrank_loc>0) then
-       ! Local master will read(write) from everybody at start(end)
-       call decomp_2d_win_transpose_start_reading(src%win)
-       call decomp_2d_win_transpose_stop_reading(src%win)
-       call decomp_2d_win_transpose_start_writing(dst%win)
-       call decomp_2d_win_transpose_stop_writing(dst%win)
-       return
-    endif
-
     s1 = src%decomp%ysz(1)
     s2 = src%decomp%ysz(2)
     s3 = src%decomp%ysz(3)
@@ -53,8 +43,15 @@
     d2 = src%decomp%zsz(2)
     d3 = src%decomp%zsz(3)
 
-    ! In case of MPI3 shared memory, local master starts reading
-    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_start_reading(src%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_start_writing(work1_c_win)
+       else
+          call decomp_2d_win_transpose_start_writing(work1_r_win)
+       endif
+    endif
 
     ! rearrange source array as send buffer
     if (src%is_cplx) then
@@ -62,7 +59,7 @@
        call mem_split_yz_complex(src%cvar, s1, s2, s3, work1_c_d, dims(2), &
             src%decomp%y2dist, src%decomp)
 #else
-       call mem_split_yz_complex(src%cvar, s1, s2, s3, work1_c, dims(2), &
+       call mem_split_yz_complex(src, s1, s2, s3, work1_c, dims(2), &
             src%decomp%y2dist, src%decomp)
 #endif
     else
@@ -70,15 +67,23 @@
        call mem_split_yz_real(src%var, s1, s2, s3, work1_r_d, dims(2), &
             src%decomp%y2dist, src%decomp)
 #else
-       call mem_split_yz_real(src%var, s1, s2, s3, work1_r, dims(2), &
+       call mem_split_yz_real(src, s1, s2, s3, work1_r, dims(2), &
             src%decomp%y2dist, src%decomp)
 #endif
     endif
 
-    ! In case of MPI3 shared memory, local master is done reading
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_stop_reading(src%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_stop_writing(work1_c_win)
+       else
+          call decomp_2d_win_transpose_stop_writing(work1_r_win)
+       endif
+    endif
 
     ! transpose using MPI_ALLTOALL(V)
+    if (nrank_loc <= 0) then
     if (src%is_cplx) then
 #ifdef EVEN
        call MPI_ALLTOALL(work1_c, src%decomp%y2count, &
@@ -132,29 +137,44 @@
 
 #endif
     endif
+    endif
 
     ! In case of MPI3 shared memory, local master starts writing
-    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst%win)
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_start_writing(dst%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_start_reading(work2_c_win)
+       else
+          call decomp_2d_win_transpose_start_reading(work2_r_win)
+       endif
+    endif
 
     ! rearrange receive buffer
     if (src%is_cplx) then
 #if defined(_GPU)
        istat = cudaMemcpy( dst%cvar, work2_c_d, d1*d2*d3, cudaMemcpyDeviceToDevice )
 #else
-       call mem_merge_yz_complex(work2_c, d1, d2, d3, dst%cvar, dims(2), &
+       call mem_merge_yz_complex(work2_c, d1, d2, d3, dst, dims(2), &
          src%decomp%z2dist, src%decomp)
 #endif
     else
 #if defined(_GPU)
        istat = cudaMemcpy( dst%var, work2_r_d, d1*d2*d3, cudaMemcpyDeviceToDevice )
 #else
-       call mem_merge_yz_real(work2_r, d1, d2, d3, dst%var, dims(2), &
+       call mem_merge_yz_real(work2_r, d1, d2, d3, dst, dims(2), &
          src%decomp%z2dist, src%decomp)
 #endif
     endif
 
     ! In case of MPI3 shared memory, local master is done writing
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst%win)
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_stop_writing(dst%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_stop_reading(work2_c_win)
+       else
+          call decomp_2d_win_transpose_stop_reading(work2_r_win)
+       endif
+    endif
 
   end subroutine transpose_y_to_z_data
 
@@ -223,7 +243,7 @@
     implicit none
 
     integer, intent(IN) :: n1,n2,n3
-    real(mytype), dimension(n1,n2,n3), intent(IN) :: in
+    type(decomp_data), intent(in) :: in
     real(mytype), dimension(*), intent(OUT) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
@@ -254,13 +274,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do i=1,n2
-             do j=i1,i2
-                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in(j,i,k)
+       if (d2d_intranode .and. associated(in%var2d)) then
+          do k = 1, decomp%ysz_loc(3)
+             do j = i1, i2
+                out(decomp%intramap_split(3,j,k)) = in%var2d(j,k)
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do i=1,n2
+                do j=i1,i2
+                   out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%var(j,i,k)
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
@@ -273,7 +301,7 @@
     implicit none
 
     integer, intent(IN) :: n1,n2,n3
-    complex(mytype), dimension(n1,n2,n3), intent(IN) :: in
+    type(decomp_data), intent(in) :: in
     complex(mytype), dimension(*), intent(OUT) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
@@ -304,13 +332,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do i=1,n2
-             do j=i1,i2
-                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in(j,i,k)
+       if (d2d_intranode .and. associated(in%cvar2d)) then
+          do k = 1, decomp%ysz_loc(3)
+             do j = i1, i2
+                out(decomp%intramap_split(3,j,k)) = in%cvar2d(j,k)
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do i=1,n2
+                do j=i1,i2
+                   out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%cvar(j,i,k)
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
@@ -324,7 +360,7 @@
     
     integer, intent(IN) :: n1,n2,n3
     real(mytype), dimension(*), intent(IN) :: in
-    real(mytype), dimension(n1,n2,n3), intent(OUT) :: out
+    type(decomp_data), intent(inout) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
@@ -345,14 +381,21 @@
 #else
        pos = decomp%z2disp(m) + 1
 #endif
-
-       do j=1,n3
-          do i=1,n2
-             do k=i1,i2
-                out(k,i,j) = in(pos + i-1 + n2*(j-1) + n2*n3*(k-i1))
+       if (d2d_intranode .and. associated(out%var2d)) then
+          do j = 1, decomp%zsz_loc(3)
+             do k = i1, i2
+                out%var2d(k,j) = in(decomp%intramap_merge(3,k,j))
+             enddo
+          enddo
+       else
+          do j=1,n3
+             do i=1,n2
+                do k=i1,i2
+                   out%var(k,i,j) = in(pos + i-1 + n2*(j-1) + n2*n3*(k-i1))
+                end do
              end do
           end do
-       end do
+       endif
     end do
 
     return
@@ -365,7 +408,7 @@
     
     integer, intent(IN) :: n1,n2,n3
     complex(mytype), dimension(*), intent(IN) :: in
-    complex(mytype), dimension(n1,n2,n3), intent(OUT) :: out
+    type(decomp_data), intent(inout) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
@@ -386,14 +429,21 @@
 #else
        pos = decomp%z2disp(m) + 1
 #endif
-
-       do j=1,n3
-          do i=1,n2
-             do k=i1,i2
-                out(k,i,j) = in(pos + i-1 + n2*(j-1) + n2*n3*(k-i1))
+       if (d2d_intranode .and. associated(out%cvar2d)) then
+          do j = 1, decomp%zsz_loc(3)
+             do k = i1, i2 
+                out%cvar2d(k,j) = in(decomp%intramap_merge(3,k,j))
+             enddo
+          enddo
+       else
+          do j=1,n3
+             do i=1,n2
+                do k=i1,i2
+                   out%cvar(k,i,j) = in(pos + i-1 + n2*(j-1) + n2*n3*(k-i1))
+                end do
              end do
           end do
-       end do
+       endif
     end do
 
     return
