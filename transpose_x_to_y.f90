@@ -15,8 +15,17 @@
 
     implicit none
 
+    ! Arguments
     type(decomp_data), intent(in) :: src
     type(decomp_data), intent(inout) :: dst
+
+    ! Local variables
+    integer :: s1, s2, s3, d1, d2, d3, ierror
+#if defined(_GPU)
+#if defined(_NCCL)
+    integer :: col_rank_id
+#endif
+#endif
 
     ! Safety check
 #ifdef DEBUG
@@ -27,222 +36,189 @@
        call decomp_2d_abort(__FILE__, __LINE__, -1, "Impossible transpose operation")
 #endif
 
-    if (src%is_cplx) then
-       call transpose_x_to_y_complex(src%cvar, dst%cvar, src%decomp, src%win, dst%win)
-    else
-       call transpose_x_to_y_real(src%var, dst%var, src%decomp, src%win, dst%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode.and.nrank_loc>0) then
+       ! Local master will read(write) from everybody at start(end)
+       call decomp_2d_win_transpose_start_reading(src%win)
+       call decomp_2d_win_transpose_stop_reading(src%win)
+       call decomp_2d_win_transpose_start_writing(dst%win)
+       call decomp_2d_win_transpose_stop_writing(dst%win)
+       return
     endif
+
+    s1 = src%decomp%xsz(1)
+    s2 = src%decomp%xsz(2)
+    s3 = src%decomp%xsz(3)
+    d1 = src%decomp%ysz(1)
+    d2 = src%decomp%ysz(2)
+    d3 = src%decomp%ysz(3)
+
+    ! In case of MPI3 shared memory, local master starts reading
+    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src%win)
+
+    ! rearrange source array as send buffer
+    if (src%is_cplx) then
+#if defined(_GPU)
+       call mem_split_xy_complex(src%cvar, s1, s2, s3, work1_c_d, dims(1), &
+            src%decomp%x1dist, src%decomp)
+#else
+       call mem_split_xy_complex(src%cvar, s1, s2, s3, work1_c, dims(1), &
+            src%decomp%x1dist, src%decomp)
+#endif
+    else
+#if defined(_GPU)
+       call mem_split_xy_real(src%var, s1, s2, s3, work1_r_d, dims(1), &
+            src%decomp%x1dist, src%decomp)
+#else
+       call mem_split_xy_real(src%var, s1, s2, s3, work1_r, dims(1), &
+            src%decomp%x1dist, src%decomp)
+#endif
+    endif
+
+    ! In case of MPI3 shared memory, local master is done reading
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src%win)
+
+    ! transpose using MPI_ALLTOALL(V)
+    if (src%is_cplx) then
+#ifdef EVEN
+       call MPI_ALLTOALL(work1_c, src%decomp%x1count, &
+            complex_type, work2_c, src%decomp%y1count, &
+            complex_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
+#else
+
+#if defined(_GPU)
+       call MPI_ALLTOALLV(work1_c_d, src%decomp%x1cnts, src%decomp%x1disp, &
+            complex_type, work2_c_d, src%decomp%y1cnts, src%decomp%y1disp, &
+            complex_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
+#else
+       call MPI_ALLTOALLV(work1_c, src%decomp%x1cnts, src%decomp%x1disp, &
+            complex_type, work2_c, src%decomp%y1cnts, src%decomp%y1disp, &
+            complex_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
+#endif
+
+#endif
+    else
+#ifdef EVEN
+       call MPI_ALLTOALL(work1_r, src%decomp%x1count, &
+            real_type, work2_r, src%decomp%y1count, &
+            real_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
+#else
+
+#if defined(_GPU)
+#if defined(_NCCL)
+       nccl_stat = ncclGroupStart()
+       do col_rank_id = 0, (col_comm_size - 1)
+           nccl_stat = ncclSend(work1_r_d( src%decomp%x1disp(col_rank_id)+1 ), src%decomp%x1cnts(col_rank_id), ncclDouble, local_to_global_col(col_rank_id+1), nccl_comm_2decomp, cuda_stream_2decomp)
+           nccl_stat = ncclRecv(work2_r_d( src%decomp%y1disp(col_rank_id)+1 ), src%decomp%y1cnts(col_rank_id), ncclDouble, local_to_global_col(col_rank_id+1), nccl_comm_2decomp, cuda_stream_2decomp)
+       end do
+       nccl_stat = ncclGroupEnd()
+       cuda_stat = cudaStreamSynchronize(cuda_stream_2decomp)
+#else
+       call MPI_ALLTOALLV(work1_r_d, src%decomp%x1cnts, src%decomp%x1disp, &
+            real_type, work2_r_d, src%decomp%y1cnts, src%decomp%y1disp, &
+            real_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
+#endif
+#else
+       call MPI_ALLTOALLV(work1_r, src%decomp%x1cnts, src%decomp%x1disp, &
+            real_type, work2_r, src%decomp%y1cnts, src%decomp%y1disp, &
+            real_type, DECOMP_2D_COMM_COL, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
+#endif
+
+#endif
+    endif
+
+    ! In case of MPI3 shared memory, local master starts writing 
+    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst%win)
+    
+    ! rearrange receive buffer
+    if (src%is_cplx) then
+#if defined(_GPU)          
+       call mem_merge_xy_complex(work2_c_d, d1, d2, d3, dst%cvar, dims(1), & 
+            src%decomp%y1dist, src%decomp)
+#else                 
+       call mem_merge_xy_complex(work2_c, d1, d2, d3, dst%cvar, dims(1), & 
+            src%decomp%y1dist, src%decomp)
+#endif
+    else
+#if defined(_GPU)
+       call mem_merge_xy_real(work2_r_d, d1, d2, d3, dst%var, dims(1), &
+            src%decomp%y1dist, src%decomp)
+#else
+       call mem_merge_xy_real(work2_r, d1, d2, d3, dst%var, dims(1), &
+            src%decomp%y1dist, src%decomp)
+#endif
+    endif
+
+    ! In case of MPI3 shared memory, local master is done writing
+    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst%win)
 
   end subroutine transpose_x_to_y_data
 
   subroutine transpose_x_to_y_real(src, dst, opt_decomp, src_win, dst_win)
 
     implicit none
-    
+
+    ! Arguments
     real(mytype), dimension(:,:,:), pointer, intent(IN) :: src
     real(mytype), dimension(:,:,:), pointer, intent(INOUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     integer, intent(in), optional :: src_win, dst_win
 
-    TYPE(DECOMP_INFO) :: decomp
+    ! Local variables
+    type(decomp_data) :: data_src, data_dst
 
-#if defined(_GPU)
-#if defined(_NCCL)
-    integer :: col_rank_id
-#endif
-#endif
+    ! Init using given array
+    call data_src%init(is_cplx = .false., idir = 1, decomp = opt_decomp, rwk = src)
+    call data_dst%init(is_cplx = .false., idir = 2, decomp = opt_decomp, rwk = dst)
+    if (present(src_win)) data_src%win = src_win
+    if (present(dst_win)) data_dst%win = dst_win
+    ! Transpose
+    call transpose_x_to_y(data_src, data_dst)
+    ! Clean
+    nullify(data_src%decomp)
+    nullify(data_src%var)
+    nullify(data_dst%decomp)
+    nullify(data_dst%var)
+    data_src%win = MPI_WIN_NULL
+    data_dst%win = MPI_WIN_NULL
 
-    integer :: s1,s2,s3,d1,d2,d3
-    integer :: ierror
-
-    ! In case of MPI3 shared memory
-    if (d2d_intranode.and.nrank_loc>0) then
-       ! Local master will read(write) from everybody at start(end)
-       call decomp_2d_win_transpose_start_reading(src_win)
-       call decomp_2d_win_transpose_stop_reading(src_win)
-       call decomp_2d_win_transpose_start_writing(dst_win)
-       call decomp_2d_win_transpose_stop_writing(dst_win)
-       return
-    endif
-
-    if (present(opt_decomp)) then
-       decomp = opt_decomp
-    else
-       decomp = decomp_main
-    end if
-
-    s1 = decomp%xsz(1)
-    s2 = decomp%xsz(2)
-    s3 = decomp%xsz(3)
-    d1 = decomp%ysz(1)
-    d2 = decomp%ysz(2)
-    d3 = decomp%ysz(3)
-
-    ! In case of MPI3 shared memory, local master starts reading
-    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src_win)
-
-    ! rearrange source array as send buffer
-#if defined(_GPU)
-    call mem_split_xy_real(src, s1, s2, s3, work1_r_d, dims(1), &
-         decomp%x1dist, decomp)
-#else
-    call mem_split_xy_real(src, s1, s2, s3, work1_r, dims(1), &
-         decomp%x1dist, decomp)
-#endif
-
-    ! In case of MPI3 shared memory, local master is done reading
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src_win)
-
-    ! transpose using MPI_ALLTOALL(V)
-#ifdef EVEN
-    call MPI_ALLTOALL(work1_r, decomp%x1count, &
-         real_type, work2_r, decomp%y1count, &
-         real_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
-#else
-
-#if defined(_GPU)
-#if defined(_NCCL)
-    nccl_stat = ncclGroupStart()
-    do col_rank_id = 0, (col_comm_size - 1)
-        nccl_stat = ncclSend(work1_r_d( decomp%x1disp(col_rank_id)+1 ), decomp%x1cnts(col_rank_id), ncclDouble, local_to_global_col(col_rank_id+1), nccl_comm_2decomp, cuda_stream_2decomp)
-        nccl_stat = ncclRecv(work2_r_d( decomp%y1disp(col_rank_id)+1 ), decomp%y1cnts(col_rank_id), ncclDouble, local_to_global_col(col_rank_id+1), nccl_comm_2decomp, cuda_stream_2decomp)
-    end do
-    nccl_stat = ncclGroupEnd()
-    cuda_stat = cudaStreamSynchronize(cuda_stream_2decomp)
-#else
-    call MPI_ALLTOALLV(work1_r_d, decomp%x1cnts, decomp%x1disp, &
-         real_type, work2_r_d, decomp%y1cnts, decomp%y1disp, &
-         real_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-#endif
-#else
-    call MPI_ALLTOALLV(work1_r, decomp%x1cnts, decomp%x1disp, &
-         real_type, work2_r, decomp%y1cnts, decomp%y1disp, &
-         real_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-#endif
-
-#endif
-
-    ! In case of MPI3 shared memory, local master starts writing
-    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst_win)
-
-    ! rearrange receive buffer
-#if defined(_GPU)
-    call mem_merge_xy_real(work2_r_d, d1, d2, d3, dst, dims(1), &
-         decomp%y1dist, decomp)
-#else
-    call mem_merge_xy_real(work2_r, d1, d2, d3, dst, dims(1), &
-         decomp%y1dist, decomp)
-#endif
- 
-    ! In case of MPI3 shared memory, local master is done writing
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst_win)
-
-    return
   end subroutine transpose_x_to_y_real
-
-
 
   subroutine transpose_x_to_y_complex(src, dst, opt_decomp, src_win, dst_win)
 
     implicit none
-    
+ 
+    ! Arguments
     complex(mytype), dimension(:,:,:), pointer, intent(IN) :: src
     complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: dst
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     integer, intent(in), optional :: src_win, dst_win
 
-    TYPE(DECOMP_INFO) :: decomp
+    ! Local variables
+    type(decomp_data) :: data_src, data_dst
 
-#if defined(_GPU)
-#if defined(_NCCL)
-    integer :: col_rank_id
-#endif
-#endif
+    ! Init using given array
+    call data_src%init(is_cplx = .true., idir = 1, decomp = opt_decomp, cwk = src)
+    call data_dst%init(is_cplx = .true., idir = 2, decomp = opt_decomp, cwk = dst)
+    if (present(src_win)) data_src%win = src_win
+    if (present(dst_win)) data_dst%win = dst_win
+    ! Transpose
+    call transpose_x_to_y(data_src, data_dst)
+    ! Clean
+    nullify(data_src%decomp)
+    nullify(data_src%cvar)
+    nullify(data_dst%decomp)
+    nullify(data_dst%cvar)
+    data_src%win = MPI_WIN_NULL
+    data_dst%win = MPI_WIN_NULL
 
-    integer :: s1,s2,s3,d1,d2,d3
-    integer :: ierror
-
-    ! In case of MPI3 shared memory
-    if (d2d_intranode.and.nrank_loc>0) then
-       ! Local master will read(write) from everybody at start(end)
-       call decomp_2d_win_transpose_start_reading(src_win)
-       call decomp_2d_win_transpose_stop_reading(src_win)
-       call decomp_2d_win_transpose_start_writing(dst_win)
-       call decomp_2d_win_transpose_stop_writing(dst_win)
-       return
-    endif
-
-    if (present(opt_decomp)) then
-       decomp = opt_decomp
-    else
-       decomp = decomp_main
-    end if
-
-    s1 = decomp%xsz(1)
-    s2 = decomp%xsz(2)
-    s3 = decomp%xsz(3)
-    d1 = decomp%ysz(1)
-    d2 = decomp%ysz(2)
-    d3 = decomp%ysz(3)
-
-    ! In case of MPI3 shared memory, local master starts reading
-    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src_win)
-
-    ! rearrange source array as send buffer
-#if defined(_GPU)
-    call mem_split_xy_complex(src, s1, s2, s3, work1_c_d, dims(1), &
-         decomp%x1dist, decomp)
-#else
-    call mem_split_xy_complex(src, s1, s2, s3, work1_c, dims(1), &
-         decomp%x1dist, decomp)
-#endif
-
-    ! In case of MPI3 shared memory, local master is done reading
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src_win)
-
-    ! transpose using MPI_ALLTOALL(V)
-#ifdef EVEN
-    call MPI_ALLTOALL(work1_c, decomp%x1count, &
-         complex_type, work2_c, decomp%y1count, &
-         complex_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALL")
-#else
-
-#if defined(_GPU)
-    call MPI_ALLTOALLV(work1_c_d, decomp%x1cnts, decomp%x1disp, &
-         complex_type, work2_c_d, decomp%y1cnts, decomp%y1disp, &
-         complex_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-#else
-    call MPI_ALLTOALLV(work1_c, decomp%x1cnts, decomp%x1disp, &
-         complex_type, work2_c, decomp%y1cnts, decomp%y1disp, &
-         complex_type, DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_ALLTOALLV")
-#endif
-
-#endif
-
-    ! In case of MPI3 shared memory, local master starts writing
-    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst_win)
-
-    ! rearrange receive buffer
-#if defined(_GPU)
-    call mem_merge_xy_complex(work2_c_d, d1, d2, d3, dst, dims(1), &
-         decomp%y1dist, decomp)
-#else
-    call mem_merge_xy_complex(work2_c, d1, d2, d3, dst, dims(1), &
-         decomp%y1dist, decomp)
-#endif
-
-    ! In case of MPI3 shared memory, local master is done writing
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst_win)
-
-    return
   end subroutine transpose_x_to_y_complex
-
 
   subroutine mem_split_xy_real(in,n1,n2,n3,out,iproc,dist,decomp)
 
