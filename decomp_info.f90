@@ -485,7 +485,7 @@ contains
     !       * pas de plantage en O2
     
     character(len=100) :: tmp_char
-    if (nrank==0) then
+    if (nrank==0.and.nrank_loc<=0) then
        open(newunit=i, file='temp.dat', form='unformatted')
        write(i) decomp%x1dist,decomp%y1dist,decomp%y2dist,decomp%z2dist, &
                 decomp%xsz,decomp%ysz,decomp%zsz

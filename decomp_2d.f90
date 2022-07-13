@@ -549,7 +549,7 @@ contains
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_TYPE_SIZE")
 
 #ifdef EVEN
-    if (nrank==0) write(*,*) 'Padded ALLTOALL optimisation on'
+    if (nrank==0.and.nrank_loc<=0) write(*,*) 'Padded ALLTOALL optimisation on'
 #endif 
 
 #if defined(_GPU)
@@ -771,20 +771,20 @@ contains
     integer, allocatable, dimension(:) :: factors
     integer :: nfact, i, col, i_best
 
-    if (nrank==0) write(*,*) 'In auto-tuning mode......'
+    if (nrank==0.and.nrank_loc<=0) write(*,*) 'In auto-tuning mode......'
 
     i = int(sqrt(real(iproc))) + 10  ! enough space to save all factors 
     allocate(factors(i))
     call findfactor(iproc, factors, nfact)
-    if (nrank==0) write(*,*) 'factors: ', (factors(i), i=1,nfact)
+    if (nrank==0.and.nrank_loc<=0) write(*,*) 'factors: ', (factors(i), i=1,nfact)
 
     i_best=nfact/2+1
     col=factors(i_best)
 
     best_p_col = col
     best_p_row=iproc/col
-    if (nrank==0) print *,'p_row x p_col', best_p_row, best_p_col
-    if ((best_p_col==1).and.(nrank==0)) then
+    if (nrank==0.and.nrank_loc<=0) print *,'p_row x p_col', best_p_row, best_p_col
+    if (best_p_col==1.and.nrank==0.and.nrank_loc<=0) then
        print *,'WARNING: current 2D DECOMP set-up might not work'
     endif
     
@@ -815,7 +815,7 @@ contains
 
     integer :: ierror
 
-    if (nrank==0) then
+    if (nrank==0.and.nrank_loc<=0) then
        write(*,*) '2DECOMP&FFT ERROR - errorcode: ', errorcode
        write(*,*) 'ERROR MESSAGE: ' // msg
        write(error_unit,*) '2DECOMP&FFT ERROR - errorcode: ', errorcode
@@ -836,7 +836,7 @@ contains
 
     integer :: ierror
 
-    if (nrank==0) then
+    if (nrank==0.and.nrank_loc<=0) then
        write(*,*) '2DECOMP&FFT / X3D ERROR'
        write(*,*) '  errorcode:     ', errorcode
        write(*,*) '  error in file  ' // file
@@ -861,7 +861,7 @@ contains
     integer, intent(IN) :: errorcode
     character(len=*), intent(IN) :: msg
 
-    if (nrank==0) then
+    if (nrank==0.and.nrank_loc<=0) then
        write(*,*) '2DECOMP&FFT WARNING - errorcode: ', errorcode
        write(*,*) 'ERROR MESSAGE: ' // msg
        write(error_unit,*) '2DECOMP&FFT WARNING - errorcode: ', errorcode
@@ -879,7 +879,7 @@ contains
     integer, intent(IN) :: errorcode, line
     character(len=*), intent(IN) :: msg, file
 
-    if (nrank==0) then
+    if (nrank==0.and.nrank_loc<=0) then
        write(*,*) '2DECOMP&FFT / X3D WARNING'
        write(*,*) '  errorcode:     ', errorcode
        write(*,*) '  error in file  ' // file
