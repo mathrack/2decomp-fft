@@ -133,6 +133,8 @@ contains
       ! Argument
       class(decomp_data), intent(inout) :: self
 
+      if (associated(self%decomp)) nullify(self%decomp)
+
       if (self%shm) then
          call decomp_2d_win_free(self%win)
          if (self%is_cplx) then
