@@ -16,7 +16,6 @@ module decomp_2d
 
   use MPI
   use, intrinsic :: iso_fortran_env, only : real32, real64
-  use, intrinsic :: iso_c_binding, only : c_loc, c_ptr, c_f_pointer
 #if defined(_GPU)
   use cudafor
 #if defined(_NCCL)
@@ -214,19 +213,66 @@ module decomp_2d
      module procedure update_halo_complex
   end interface update_halo
 
+  ! Submodule alloc
+
+  interface
+     module subroutine alloc_x_real(var, var2d, opt_decomp, opt_global, win)
+        real(mytype), dimension(:,:,:), pointer :: var
+        real(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_x_real
+     module subroutine alloc_x_complex(var, var2d, opt_decomp, opt_global, win)
+        complex(mytype), dimension(:,:,:), pointer :: var
+        complex(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_x_complex
+  end interface
   interface alloc_x
-     module procedure alloc_x_real
-     module procedure alloc_x_complex
+     module procedure alloc_x_real, alloc_x_complex
   end interface alloc_x
 
+  interface
+     module subroutine alloc_y_real(var, var2d, opt_decomp, opt_global, win)
+        real(mytype), dimension(:,:,:), pointer :: var
+        real(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_y_real
+     module subroutine alloc_y_complex(var, var2d, opt_decomp, opt_global, win)
+        complex(mytype), dimension(:,:,:), pointer :: var
+        complex(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_y_complex
+  end interface
   interface alloc_y
-     module procedure alloc_y_real
-     module procedure alloc_y_complex
+     module procedure alloc_y_real, alloc_y_complex
   end interface alloc_y
 
+  interface
+     module subroutine alloc_z_real(var, var2d, opt_decomp, opt_global, win)
+        real(mytype), dimension(:,:,:), pointer :: var
+        real(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_z_real
+     module subroutine alloc_z_complex(var, var2d, opt_decomp, opt_global, win)
+        complex(mytype), dimension(:,:,:), pointer :: var 
+        complex(mytype), dimension(:,:), pointer, optional :: var2d
+        TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
+        logical, intent(IN), optional :: opt_global
+        integer, intent(out), optional :: win
+     end subroutine alloc_z_complex
+  end interface
   interface alloc_z
-     module procedure alloc_z_real
-     module procedure alloc_z_complex
+     module procedure alloc_z_real, alloc_z_complex
   end interface alloc_z
 
   interface decomp_2d_abort
@@ -848,11 +894,5 @@ contains
 
   end subroutine decomp_2d_warning_file_line
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Utility routines to help allocate 3D arrays
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#include "alloc.f90"
-    
-  
 end module decomp_2d
 
