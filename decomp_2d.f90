@@ -137,6 +137,9 @@ module decomp_2d
      ! evenly distributed data
      logical :: even
 
+     ! node-level map for intra-node split and merge
+     integer, allocatable, dimension(:,:,:) :: intramap_split, intramap_merge
+
   END TYPE DECOMP_INFO
 
   ! main (default) decomposition information for global size nx*ny*nz

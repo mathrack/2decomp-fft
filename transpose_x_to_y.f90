@@ -36,16 +36,6 @@
        call decomp_2d_abort(__FILE__, __LINE__, -1, "Impossible transpose operation")
 #endif
 
-    ! In case of MPI3 shared memory
-    if (d2d_intranode.and.nrank_loc>0) then
-       ! Local master will read(write) from everybody at start(end)
-       call decomp_2d_win_transpose_start_reading(src%win)
-       call decomp_2d_win_transpose_stop_reading(src%win)
-       call decomp_2d_win_transpose_start_writing(dst%win)
-       call decomp_2d_win_transpose_stop_writing(dst%win)
-       return
-    endif
-
     s1 = src%decomp%xsz(1)
     s2 = src%decomp%xsz(2)
     s3 = src%decomp%xsz(3)
@@ -53,8 +43,16 @@
     d2 = src%decomp%ysz(2)
     d3 = src%decomp%ysz(3)
 
-    ! In case of MPI3 shared memory, local master starts reading
-    if (d2d_intranode) call decomp_2d_win_transpose_start_reading(src%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_start_reading(src%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_start_writing(work1_c_win)
+       else
+          call decomp_2d_win_transpose_start_writing(work1_r_win)
+       endif
+    endif
+
 
     ! rearrange source array as send buffer
     if (src%is_cplx) then
@@ -62,7 +60,7 @@
        call mem_split_xy_complex(src%cvar, s1, s2, s3, work1_c_d, dims(1), &
             src%decomp%x1dist, src%decomp)
 #else
-       call mem_split_xy_complex(src%cvar, s1, s2, s3, work1_c, dims(1), &
+       call mem_split_xy_complex(src, s1, s2, s3, work1_c, dims(1), &
             src%decomp%x1dist, src%decomp)
 #endif
     else
@@ -70,15 +68,23 @@
        call mem_split_xy_real(src%var, s1, s2, s3, work1_r_d, dims(1), &
             src%decomp%x1dist, src%decomp)
 #else
-       call mem_split_xy_real(src%var, s1, s2, s3, work1_r, dims(1), &
+       call mem_split_xy_real(src, s1, s2, s3, work1_r, dims(1), &
             src%decomp%x1dist, src%decomp)
 #endif
     endif
 
-    ! In case of MPI3 shared memory, local master is done reading
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_reading(src%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_stop_reading(src%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_stop_writing(work1_c_win)
+       else
+          call decomp_2d_win_transpose_stop_writing(work1_r_win)
+       endif
+    endif
 
     ! transpose using MPI_ALLTOALL(V)
+    if (nrank_loc <= 0) then
     if (src%is_cplx) then
 #ifdef EVEN
        call MPI_ALLTOALL(work1_c, src%decomp%x1count, &
@@ -132,9 +138,17 @@
 
 #endif
     endif
+    endif
 
-    ! In case of MPI3 shared memory, local master starts writing 
-    if (d2d_intranode) call decomp_2d_win_transpose_start_writing(dst%win)
+    ! In case of MPI3 shared memory
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_start_writing(dst%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_start_reading(work2_c_win)
+       else
+          call decomp_2d_win_transpose_start_reading(work2_r_win)
+       endif
+    endif
     
     ! rearrange receive buffer
     if (src%is_cplx) then
@@ -142,7 +156,7 @@
        call mem_merge_xy_complex(work2_c_d, d1, d2, d3, dst%cvar, dims(1), & 
             src%decomp%y1dist, src%decomp)
 #else                 
-       call mem_merge_xy_complex(work2_c, d1, d2, d3, dst%cvar, dims(1), & 
+       call mem_merge_xy_complex(work2_c, d1, d2, d3, dst, dims(1), & 
             src%decomp%y1dist, src%decomp)
 #endif
     else
@@ -150,13 +164,20 @@
        call mem_merge_xy_real(work2_r_d, d1, d2, d3, dst%var, dims(1), &
             src%decomp%y1dist, src%decomp)
 #else
-       call mem_merge_xy_real(work2_r, d1, d2, d3, dst%var, dims(1), &
+       call mem_merge_xy_real(work2_r, d1, d2, d3, dst, dims(1), &
             src%decomp%y1dist, src%decomp)
 #endif
     endif
 
     ! In case of MPI3 shared memory, local master is done writing
-    if (d2d_intranode) call decomp_2d_win_transpose_stop_writing(dst%win)
+    if (d2d_intranode) then
+       call decomp_2d_win_transpose_stop_writing(dst%win)
+       if (src%is_cplx) then
+          call decomp_2d_win_transpose_stop_reading(work2_c_win)
+       else
+          call decomp_2d_win_transpose_stop_reading(work2_r_win)
+       endif
+    endif
 
   end subroutine transpose_x_to_y_data
 
@@ -224,17 +245,19 @@
 
     implicit none
 
+    ! Arguments
     integer, intent(IN) :: n1,n2,n3
-    real(mytype), dimension(n1,n2,n3), intent(IN) :: in
+    type(decomp_data), intent(in) :: in
     real(mytype), dimension(*), intent(OUT) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    ! Local variables
 #if defined(_GPU)
     attributes(device) :: out
     integer :: istat
 #endif
-    
     integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
@@ -256,13 +279,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), i2-i1+1, in(i1,1,1), n1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do j=1,n2
-             do i=i1,i2
-                out(pos + i-i1 + i3*(j-1) + i3*n2*(k-1)) = in(i,j,k)
+       if (d2d_intranode .and. associated(in%var2d)) then
+          do k = 1, decomp%xsz_loc(3)
+             do i = i1, i2
+                out(decomp%intramap_split(1,i,k)) = in%var2d(i,k)
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do j=1,n2
+                do i=i1,i2
+                   out(pos + i-i1 + i3*(j-1) + i3*n2*(k-1)) = in%var(i,j,k)
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
@@ -274,17 +305,19 @@
 
     implicit none
 
+    ! Arguments
     integer, intent(IN) :: n1,n2,n3
-    complex(mytype), dimension(n1,n2,n3), intent(IN) :: in
+    type(decomp_data), intent(in) :: in
     complex(mytype), dimension(*), intent(OUT) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    ! Local variables
 #if defined(_GPU)
     attributes(device) :: out
     integer :: istat
 #endif
-
     integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
@@ -306,13 +339,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), i2-i1+1, in(i1,1,1), n1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do j=1,n2
-             do i=i1,i2
-                out(pos + i-i1 + i3*(j-1) + i3*n2*(k-1)) = in(i,j,k)
+       if (d2d_intranode .and. associated(in%var2d)) then
+          do k = 1, decomp%xsz_loc(3)
+             do i = i1, i2
+                out(decomp%intramap_split(1,i,k)) = in%cvar2d(i,k)
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do j=1,n2
+                do i=i1,i2
+                   out(pos + i-i1 + i3*(j-1) + i3*n2*(k-1)) = in%cvar(i,j,k)
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
@@ -323,18 +364,20 @@
   subroutine mem_merge_xy_real(in,n1,n2,n3,out,iproc,dist,decomp)
 
     implicit none
-    
+
+    ! Arguments
     integer, intent(IN) :: n1,n2,n3
     real(mytype), dimension(*), intent(IN) :: in
-    real(mytype), dimension(n1,n2,n3), intent(OUT) :: out
+    type(decomp_data), intent(inout) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    ! Local variables
 #if defined(_GPU)
     attributes(device) :: in
     integer :: istat
 #endif
-        
     integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
@@ -356,13 +399,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(1,i1,1), n1*n2, in(pos), n1*(i2-i1+1), n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do i=1,n2
-             do j=i1,i2
-                out(j,i,k) = in(pos + i-1 + n2*(j-i1) + n2*i3*(k-1))
+       if (d2d_intranode .and. associated(out%var2d)) then
+          do k = 1, decomp%ysz_loc(3)
+             do j = i1, i2
+                out%var2d(j,k) = in(decomp%intramap_merge(1,j,k))
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do i=1,n2
+                do j=i1,i2
+                   out%var(j,i,k) = in(pos + i-1 + n2*(j-i1) + n2*i3*(k-1))
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
@@ -373,18 +424,20 @@
   subroutine mem_merge_xy_complex(in,n1,n2,n3,out,iproc,dist,decomp)
 
     implicit none
-    
+
+    ! Arguments
     integer, intent(IN) :: n1,n2,n3
     complex(mytype), dimension(*), intent(IN) :: in
-    complex(mytype), dimension(n1,n2,n3), intent(OUT) :: out
+    type(decomp_data), intent(inout) :: out
     integer, intent(IN) :: iproc
     integer, dimension(0:iproc-1), intent(IN) :: dist
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+
+    ! Local variables
 #if defined(_GPU)
     attributes(device) :: in
     integer :: istat
 #endif
-
     integer :: i,j,k, m,i1,i2,i3, pos
 
     do m=0,iproc-1
@@ -406,13 +459,21 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(1,i1,1), n1*n2, in(pos), n1*(i2-i1+1), n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       do k=1,n3
-          do i=1,n2
-             do j=i1,i2
-                out(j,i,k) = in(pos + i-1 + n2*(j-i1) + n2*i3*(k-1))
+       if (d2d_intranode .and. associated(out%var2d)) then
+          do k = 1, decomp%ysz_loc(3)
+             do j = i1, i2
+                out%cvar2d(j,k) = in(decomp%intramap_merge(1,j,k))
+             enddo
+          enddo
+       else
+          do k=1,n3
+             do i=1,n2
+                do j=i1,i2
+                   out%cvar(j,i,k) = in(pos + i-1 + n2*(j-i1) + n2*i3*(k-1))
+                end do
              end do
           end do
-       end do
+       endif
 #endif
     end do
 
