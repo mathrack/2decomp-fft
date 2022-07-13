@@ -150,12 +150,12 @@ module decomp_2d
 
   ! These are the buffers used by MPI_ALLTOALL(V) calls
   integer, save :: decomp_buf_size = 0
-  real(mytype),    allocatable, dimension(:) :: work1_r, work2_r
-  complex(mytype), allocatable, dimension(:) :: work1_c, work2_c
+  real(mytype), pointer, dimension(:) :: work1_r, work2_r
+  complex(mytype), pointer, dimension(:) :: work1_c, work2_c
 
 #if defined(_GPU)
-  real(mytype), allocatable, dimension(:), device :: work1_r_d, work2_r_d
-  complex(mytype), allocatable, dimension(:), device :: work1_c_d, work2_c_d
+  real(mytype), pointer, dimension(:), device :: work1_r_d, work2_r_d
+  complex(mytype), pointer, dimension(:), device :: work1_c_d, work2_c_d
 
 #if defined(_NCCL)
   integer col_comm_size, row_comm_size

@@ -87,7 +87,7 @@ contains
       implicit none
 
       ! Arguments
-      real(mytype), dimension(:), allocatable, intent(out) :: array
+      real(mytype), dimension(:), pointer, intent(out) :: array
       integer, intent(in) :: buf_size
 
       ! Local variables
@@ -106,7 +106,7 @@ contains
       implicit none
 
       ! Arguments
-      complex(mytype), dimension(:), allocatable, intent(out) :: array
+      complex(mytype), dimension(:), pointer, intent(out) :: array
       integer, intent(in) :: buf_size
 
       ! Local variables
@@ -128,15 +128,15 @@ contains
 
       implicit none
 
-      if (allocated(work1_r)) deallocate (work1_r)
-      if (allocated(work2_r)) deallocate (work2_r)
-      if (allocated(work1_c)) deallocate (work1_c)
-      if (allocated(work2_c)) deallocate (work2_c)
+      if (associated(work1_r)) deallocate (work1_r)
+      if (associated(work2_r)) deallocate (work2_r)
+      if (associated(work1_c)) deallocate (work1_c)
+      if (associated(work2_c)) deallocate (work2_c)
 #if defined(_GPU)
-      if (allocated(work1_r_d)) deallocate (work1_r_d)
-      if (allocated(work2_r_d)) deallocate (work2_r_d)
-      if (allocated(work1_c_d)) deallocate (work1_c_d)
-      if (allocated(work2_c_d)) deallocate (work2_c_d)
+      if (associated(work1_r_d)) deallocate (work1_r_d)
+      if (associated(work2_r_d)) deallocate (work2_r_d)
+      if (associated(work1_c_d)) deallocate (work1_c_d)
+      if (associated(work2_c_d)) deallocate (work2_c_d)
 #endif
 
    end subroutine smod_buffer_free
