@@ -19,7 +19,7 @@ submodule(decomp_2d) smod_buffer
 contains
 
    !
-   ! Generate a IO unit for the decomp_2d listing
+   ! Free and allocate the buffers if needed
    !
    module subroutine decomp_buffer_alloc(buf_size)
 
@@ -40,12 +40,9 @@ contains
       if (buf_size <= decomp_buf_size) return
 
       decomp_buf_size = buf_size
+      call _buffer_free()
 
 #if defined(_GPU)
-      if (allocated(work1_r_d)) deallocate (work1_r_d)
-      if (allocated(work2_r_d)) deallocate (work2_r_d)
-      if (allocated(work1_c_d)) deallocate (work1_c_d)
-      if (allocated(work2_c_d)) deallocate (work2_c_d)
       allocate (work1_r_d(buf_size), STAT=status)
       if (status /= 0) then
          errorcode = 2
@@ -71,11 +68,6 @@ contains
                               'Out of memory when allocating 2DECOMP workspace')
       end if
 #endif
-
-      if (allocated(work1_r)) deallocate (work1_r)
-      if (allocated(work2_r)) deallocate (work2_r)
-      if (allocated(work1_c)) deallocate (work1_c)
-      if (allocated(work2_c)) deallocate (work2_c)
       allocate (work1_r(buf_size), STAT=status)
       if (status /= 0) then
          errorcode = 2
@@ -103,6 +95,9 @@ contains
 
    end subroutine decomp_buffer_alloc
 
+   !
+   ! Public routine to free the buffers
+   !
    module subroutine decomp_buffer_free
 
       implicit none
@@ -115,14 +110,33 @@ contains
 #endif
 
       decomp_buf_size = 0
-      deallocate (work1_r, work2_r, work1_c, work2_c)
+      call _buffer_free()
 #if defined(_GPU)
-      deallocate (work1_r_d, work2_r_d, work1_c_d, work2_c_d)
 #if defined(_NCCL)
       nccl_stat = ncclCommDestroy(nccl_comm_2decomp)
 #endif
 #endif
 
    end subroutine decomp_buffer_free
+
+   !
+   ! Internal routine to free the buffers
+   !
+   module subroutine _buffer_free
+
+      implicit none
+
+      if (allocated(work1_r)) deallocate (work1_r)
+      if (allocated(work2_r)) deallocate (work2_r)
+      if (allocated(work1_c)) deallocate (work1_c)
+      if (allocated(work2_c)) deallocate (work2_c)
+#if defined(_GPU)
+      if (allocated(work1_r_d)) deallocate (work1_r_d)
+      if (allocated(work2_r_d)) deallocate (work2_r_d)
+      if (allocated(work1_c_d)) deallocate (work1_c_d)
+      if (allocated(work2_c_d)) deallocate (work2_c_d)
+#endif
+
+   end subroutine _buffer_free
 
 end submodule smod_buffer
