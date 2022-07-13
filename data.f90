@@ -40,7 +40,6 @@ contains
 #ifdef DEBUG
       if (idir <= 0 .or. idir > 3 .or. &
           associated(self%var) .or. associated(self%cvar) .or. &
-          (d2d_intranode .and. (present(rwk).or.present(cwk))) .or. &
           (is_cplx .and. present(rwk)) .or. &
           ((.not. is_cplx) .and. present(cwk))) &
          call decomp_2d_abort(__FILE__, &
