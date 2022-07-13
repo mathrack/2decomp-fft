@@ -124,6 +124,23 @@ contains
    end subroutine decomp_data_init
 
    !
+   ! Initialize the object using an existing one
+   !
+   module subroutine decomp_data_init_copy(self, dat)
+
+      implicit none
+
+      ! Arguments
+      class(decomp_data), intent(out) :: self
+      type(decomp_data), intent(in) :: dat
+
+      call self%init(is_cplx = dat%is_cplx, &
+                     idir = dat%idir, &
+                     decomp = dat%decomp)
+
+   end subroutine decomp_data_init_copy
+
+   !
    ! Free memory
    !
    module subroutine decomp_data_fin(self)
