@@ -90,6 +90,15 @@ contains
 
     integer :: buf_size, status, errorcode
 
+    ! verify the global size can actually be distributed as pencils
+    if (nx_global<dims(1) .or. ny_global<dims(1) .or. ny_global<dims(2) .or. nz_global<dims(2)) then
+       errorcode = 6
+       call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
+            'Invalid 2D processor grid. ' // &
+            'Make sure that min(nx,ny) >= p_row and ' // &
+            'min(ny,nz) >= p_col')
+    end if
+
     ! In case of MPI3 shared memory and proc is not local master
     if (d2d_intranode .and. nrank_loc/=0) then
        call decomp_info_init_local(decomp)
@@ -105,15 +114,6 @@ contains
             decomp%zst_loc,decomp%zen_loc,decomp%zsz_loc)
        return
     endif
-
-    ! verify the global size can actually be distributed as pencils
-    if (nx_global<dims(1) .or. ny_global<dims(1) .or. ny_global<dims(2) .or. nz_global<dims(2)) then
-       errorcode = 6
-       call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-            'Invalid 2D processor grid. ' // &
-            'Make sure that min(nx,ny) >= p_row and ' // &
-            'min(ny,nz) >= p_col')
-    end if
 
     if (mod(nx,dims(1))==0 .and. mod(ny,dims(1))==0 .and. &
          mod(ny,dims(2))==0 .and. mod(nz,dims(2))==0) then
