@@ -100,7 +100,8 @@ module decomp_2d
      logical :: shm = .false.
      integer :: win = MPI_WIN_NULL
      contains
-        procedure :: init => decomp_data_init, decomp_data_init_copy
+        procedure :: init => decomp_data_init
+        procedure :: copy => decomp_data_init_copy
         procedure :: fin => decomp_data_fin
   end type decomp_data
 
