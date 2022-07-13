@@ -615,6 +615,89 @@ contains
          end do
       end do
 
+      ! transpose_y_to_x
+      iproc = dims(1)
+      ! split
+      n1 = decomp%ysz(1)
+      n2 = decomp%ysz(2)
+      n3 = decomp%ysz(3)
+      call decomp_2d_win_fence(daty%win)
+      if (nrank_loc == 0) then
+         do m = 0, iproc - 1
+            if (m == 0) then
+               i1 = 1
+               i2 = decomp%y1dist(m)
+            else
+               i1 = i2 + 1
+               i2 = i1 + decomp%y1dist(m) - 1
+            endif
+            i3 = i2 - i1 + 1
+            pos = decomp%y1disp(m) + 1
+            do k = 1, n3
+               do i = 1, n2
+                  do j = i1, i2
+                     daty%var(j,i,k) = pos + i-1 + n2*(j-i1) + n2*i3*(k-1)
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
+      call decomp_2d_win_fence(daty%win)
+      do m = 0, iproc - 1
+         if (m == 0) then
+            i1 = 1
+            i2 = decomp%y1dist(m)
+         else
+            i1 = i2 + 1
+            i2 = i1 + decomp%y1dist(m) - 1
+         endif
+         do k = 1, decomp%ysz_loc(3)
+            do j = i1, i2
+               decomp%intramap_split(2,j,k) = int(daty%var2d(j,k))
+            enddo
+         enddo
+      enddo
+      ! merge
+      n1 = decomp%xsz(1)
+      n2 = decomp%xsz(2)
+      n3 = decomp%xsz(3)
+      call decomp_2d_win_fence(datx%win)
+      if (nrank_loc == 0) then
+         do m=0,iproc-1
+            if (m==0) then
+               i1 = 1
+               i2 = decomp%x1dist(m)
+            else
+               i1 = i2 + 1
+               i2 = i1 + decomp%x1dist(m) - 1
+            endif
+            i3 = i2 - i1 + 1
+            pos = decomp%x1disp(m) + 1
+            do k = 1, n3
+               do j = 1, n2
+                  do i = i1, i2
+                     datx%var(i,j,k) = pos + i-i1 + i3*(j-1) + i3*n2*(k-1)
+                  enddo
+               enddo
+            enddo
+         enddo
+      endif
+      call decomp_2d_win_fence(datx%win)
+      do m = 0, iproc - 1
+         if (m==0) then
+            i1 = 1
+            i2 = decomp%x1dist(m)
+         else
+            i1 = i2 + 1
+            i2 = i1 + decomp%x1dist(m) - 1
+         endif
+         do k = 1, decomp%xsz_loc(3)
+            do i = i1, i2
+               decomp%intramap_merge(2,i,k) = int(datx%var2d(i,k))
+            enddo
+         enddo
+      enddo
+
       ! Clean
       call datx%fin()
       call daty%fin()
