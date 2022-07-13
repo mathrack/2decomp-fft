@@ -11,6 +11,30 @@
 
 ! This file contains the routines that transpose data from X to Y pencil
 
+  subroutine transpose_x_to_y_data(src, dst)
+
+    implicit none
+
+    type(decomp_data), intent(in) :: src
+    type(decomp_data), intent(inout) :: dst
+
+    ! Safety check
+#ifdef DEBUG
+    if (src%idir /= 1 .or. dst%idir /= 2 .or. &
+        (src%is_cplx.neqv.dst%is_cplx) .or. &
+        (src%shm.neqv.dst%shm) .or. &
+        .not.associated(src%decomp, dst%decomp)) &
+       call decomp_2d_abort(__FILE__, __LINE__, -1, "Impossible transpose operation")
+#endif
+
+    if (src%is_cplx) then
+       call transpose_x_to_y_complex(src%cvar, dst%cvar, src%decomp, src%win, dst%win)
+    else
+       call transpose_x_to_y_real(src%var, dst%var, src%decomp, src%win, dst%win)
+    endif
+
+  end subroutine transpose_x_to_y_data
+
   subroutine transpose_x_to_y_real(src, dst, opt_decomp, src_win, dst_win)
 
     implicit none

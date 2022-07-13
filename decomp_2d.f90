@@ -83,6 +83,27 @@ module decomp_2d
 #endif
 #endif
 
+  ! derived type to store generic data
+  type, public :: decomp_data
+     ! flag to determine if real or complex data
+     logical :: is_cplx = .true.
+     ! associated decomp_info object and direction
+     type(decomp_info), pointer :: decomp => null()
+     integer :: idir = 0 ! 1-2-3 for x-y-z decomp_info data
+     ! 3D array exposing the memory
+     real(mytype), dimension(:,:,:), pointer :: var => null()
+     complex(mytype), dimension(:,:,:), pointer :: cvar => null()
+     ! 2D array exposing the memory
+     real(mytype), dimension(:,:), pointer :: var2d => null()
+     complex(mytype), dimension(:,:), pointer :: cvar2d => null()
+     ! Associated window if MPI3 shared memory
+     logical :: shm = .false.
+     integer :: win = MPI_WIN_NULL
+     contains
+        procedure :: init => decomp_data_init
+        procedure :: fin => decomp_data_fin
+  end type decomp_data
+
   ! derived type to store decomposition info for a given global data size
   TYPE, public :: DECOMP_INFO
      ! staring/ending index and size of data held by current processor
@@ -118,8 +139,8 @@ module decomp_2d
   END TYPE DECOMP_INFO
 
   ! main (default) decomposition information for global size nx*ny*nz
-  TYPE(DECOMP_INFO), save, public :: decomp_main
-  TYPE(DECOMP_INFO), save, public :: phG,ph1,ph2,ph3,ph4
+  TYPE(DECOMP_INFO), save, target, public :: decomp_main
+  TYPE(DECOMP_INFO), save, target, public :: phG,ph1,ph2,ph3,ph4
 
   ! staring/ending index and size of data held by current processor
   ! duplicate 'decomp_main', needed by apps to define data structure 
@@ -189,21 +210,25 @@ module decomp_2d
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   interface transpose_x_to_y
+     module procedure transpose_x_to_y_data
      module procedure transpose_x_to_y_real
      module procedure transpose_x_to_y_complex
   end interface transpose_x_to_y
 
   interface transpose_y_to_z
+     module procedure transpose_y_to_z_data
      module procedure transpose_y_to_z_real
      module procedure transpose_y_to_z_complex
   end interface transpose_y_to_z
 
   interface transpose_z_to_y
+     module procedure transpose_z_to_y_data
      module procedure transpose_z_to_y_real
      module procedure transpose_z_to_y_complex
   end interface transpose_z_to_y
 
   interface transpose_y_to_x
+     module procedure transpose_y_to_x_data
      module procedure transpose_y_to_x_real
      module procedure transpose_y_to_x_complex
   end interface transpose_y_to_x
@@ -321,6 +346,21 @@ module decomp_2d
         real(mytype), dimension(:,:,:) :: var_fine
         real(mytype), dimension(:,:,:) :: var_coarse
      end subroutine fine_to_coarseP
+
+     ! Submodule decomp_data
+
+     module subroutine decomp_data_init(self, is_cplx, idir, decomp, rwk, cwk)
+        class(decomp_data), intent(out) :: self
+        logical, intent(in) :: is_cplx
+        integer, intent(in) :: idir
+        type(decomp_info), intent(in), target, optional :: decomp
+        real(mytype), dimension(:,:,:), target, optional :: rwk
+        complex(mytype), dimension(:,:,:), target, optional :: cwk
+     end subroutine decomp_data_init
+
+     module subroutine decomp_data_fin(self)
+        class(decomp_data), intent(inout) :: self
+     end subroutine decomp_data_fin
 
      ! Submodule decomp_info
 
