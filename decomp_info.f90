@@ -101,6 +101,7 @@ contains
 
     ! In case of MPI3 shared memory and proc is not local master
     if (d2d_intranode .and. nrank_loc/=0) then
+       call decomp_buffer_alloc(buf_size)
        call decomp_info_init_local(decomp)
        call decomp_info_init_reshapeyz(decomp)
        call partition(decomp%xsz(1),1,decomp%xsz(2)*decomp%xsz(3), &
@@ -155,68 +156,7 @@ contains
 #endif
 
     ! check if additional memory is required
-    ! *** TODO: consider how to share the real/complex buffers 
-    if (buf_size > decomp_buf_size) then
-       decomp_buf_size = buf_size
-#if defined(_GPU)
-       if (allocated(work1_r_d)) deallocate(work1_r_d)
-       if (allocated(work2_r_d)) deallocate(work2_r_d)
-       if (allocated(work1_c_d)) deallocate(work1_c_d)
-       if (allocated(work2_c_d)) deallocate(work2_c_d)
-       allocate(work1_r_d(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work1_c_d(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work2_r_d(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work2_c_d(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-#endif
-       if (allocated(work1_r)) deallocate(work1_r)
-       if (allocated(work2_r)) deallocate(work2_r)
-       if (allocated(work1_c)) deallocate(work1_c)
-       if (allocated(work2_c)) deallocate(work2_c)
-       allocate(work1_r(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work2_r(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work1_c(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-       allocate(work2_c(buf_size), STAT=status)
-       if (status /= 0) then
-          errorcode = 2
-          call decomp_2d_abort(__FILE__, __LINE__, errorcode, &
-               'Out of memory when allocating 2DECOMP workspace')
-       end if
-    end if
+    call decomp_buffer_alloc(buf_size)
 
     ! In case of MPI3 shared memory and proc is local master
     if (d2d_intranode) call decomp_info_init_local(decomp)

@@ -312,6 +312,15 @@ module decomp_2d
 
   interface
 
+     ! Submodule buffer
+
+     module subroutine decomp_buffer_alloc(buf_size)
+        integer, intent(inout) :: buf_size
+     end subroutine decomp_buffer_alloc
+
+     module subroutine decomp_buffer_free
+     end subroutine decomp_buffer_free
+
      ! Submodule coarse
 
      module subroutine init_coarser_mesh_statS(i_skip,j_skip,k_skip,from1)
@@ -740,6 +749,8 @@ contains
  
     integer :: ierror
 
+    call decomp_buffer_free()
+
     ! Release localcomm if possible
     if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL .and. DECOMP_2D_LOCALCOMM /= MPI_COMM_WORLD) then       
        call MPI_COMM_FREE(DECOMP_2D_LOCALCOMM, ierror)                                               
@@ -764,17 +775,6 @@ contains
     if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
     call decomp_info_finalize(decomp_main)
 
-    decomp_buf_size = 0
-    deallocate(work1_r, work2_r, work1_c, work2_c)
-#if defined(_GPU)
-    deallocate(work1_r_d, work2_r_d, work1_c_d, work2_c_d)
-
-#if defined(_NCCL)
-    nccl_stat = ncclCommDestroy(nccl_comm_2decomp)
-#endif
-#endif
-
-    return
   end subroutine decomp_2d_finalize
 
 

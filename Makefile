@@ -72,7 +72,7 @@ else ifeq ($(CMP),nvhpc)
 endif
 
 ### List of files for the main code
-SRCDECOMP = ./decomp_2d.f90 ./alloc.f90 ./coarse.f90 ./data.f90 ./decomp_info.f90 ./log.f90 ./wrapper.f90
+SRCDECOMP = ./decomp_2d.f90 ./alloc.f90 ./buffer.f90 ./coarse.f90 ./data.f90 ./decomp_info.f90 ./log.f90 ./wrapper.f90
 
 #######FFT settings##########
 ifeq ($(FFT),fftw3)

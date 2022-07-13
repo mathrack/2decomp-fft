@@ -1,4 +1,5 @@
 file(GLOB files_decomp alloc.f90
+	               buffer.f90
 	               coarse.f90
 		       data.f90
 	               decomp_2d.f90
