@@ -38,6 +38,59 @@ module decomp_2d_fft
   ! generic interface definitions and several subroutines
 #include "fft_common.f90"
 
+  ! Return a FFTW3 plan for multiple 1D c2c FFTs
+  subroutine c2c_1m_plan(plan1, isign, nn)
+
+    implicit none
+
+    ! Arguments
+    integer*8, intent(OUT) :: plan1
+    integer, intent(in) :: isign, nn(3)
+
+    ! Local variables
+    complex(mytype), allocatable, dimension(:,:,:) :: a3d
+    complex(mytype), allocatable, dimension(:,:) :: a2d
+
+    if (d2d_intranode) then
+
+      allocate(a2d(nn(1),nn(2)*nn(3)))
+
+#ifdef DOUBLE_PREC
+      call dfftw_plan_many_dft(plan1, 1, nn(1), &
+           nn(2)*nn(3), a2d, nn(1), 1, &
+           nn(1), a2d, nn(1), 1, nn(1), &
+           isign, plan_type)
+#else
+      call sfftw_plan_many_dft(plan1, 1, nn(1), &
+           nn(2)*nn(3), a2d, nn(1), 1, &
+           nn(1), a2d, nn(1), 1, nn(1), &
+           isign, plan_type)
+#endif
+
+      deallocate(a2d)
+
+    else
+
+      allocate(a3d(nn(1),nn(2),nn(3)))
+
+#ifdef DOUBLE_PREC
+      call dfftw_plan_many_dft(plan1, 1, nn(1), &
+           nn(2)*nn(3), a3d, nn(1), 1, &
+           nn(1), a3d, nn(1), 1, nn(1), &
+           isign, plan_type)
+#else
+      call sfftw_plan_many_dft(plan1, 1, nn(1), &
+           nn(2)*nn(3), a3d, nn(1), 1, &
+           nn(1), a3d, nn(1), 1, nn(1), &
+           isign, plan_type)
+#endif
+
+      deallocate(a3d)
+
+    endif
+
+  end subroutine c2c_1m_plan
+
   ! Return a FFTW3 plan for multiple 1D c2c FFTs in X direction
   subroutine c2c_1m_x_plan(plan1, decomp, isign)
 
@@ -47,25 +100,8 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp
     integer, intent(IN) :: isign
 
-    complex(mytype), allocatable, dimension(:,:,:) :: a1
+    call c2c_1m_plan(plan1, isign, decomp%xsz_loc)
 
-    allocate(a1(decomp%xsz(1),decomp%xsz(2),decomp%xsz(3)))
-
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft(plan1, 1, decomp%xsz(1), &
-         decomp%xsz(2)*decomp%xsz(3), a1, decomp%xsz(1), 1, &
-         decomp%xsz(1), a1, decomp%xsz(1), 1, decomp%xsz(1), &
-         isign, plan_type)
-#else
-    call sfftw_plan_many_dft(plan1, 1, decomp%xsz(1), &
-         decomp%xsz(2)*decomp%xsz(3), a1, decomp%xsz(1), 1, &
-         decomp%xsz(1), a1, decomp%xsz(1), 1, decomp%xsz(1), &
-         isign, plan_type)
-#endif
-
-    deallocate(a1)
-
-    return
   end subroutine c2c_1m_x_plan
 
   ! Return a FFTW3 plan for multiple 1D c2c FFTs in Y direction
@@ -77,28 +113,9 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp
     integer, intent(IN) :: isign
 
-    complex(mytype), allocatable, dimension(:,:) :: a1
+    call c2c_1m_plan(plan1, isign, decomp%ysz_loc)
 
-    ! Due to memory pattern of 3D arrays, 1D FFTs along Y have to be
-    ! done one Z-plane at a time. So plan for 2D data sets here.
-
-    allocate(a1(decomp%ysz(1),decomp%ysz(2)))
-
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft(plan1, 1, decomp%ysz(2), decomp%ysz(1), &
-         a1, decomp%ysz(2), decomp%ysz(1), 1, a1, decomp%ysz(2), &
-         decomp%ysz(1), 1, isign, plan_type)
-#else
-    call sfftw_plan_many_dft(plan1, 1, decomp%ysz(2), decomp%ysz(1), &
-         a1, decomp%ysz(2), decomp%ysz(1), 1, a1, decomp%ysz(2), &
-         decomp%ysz(1), 1, isign, plan_type)
-#endif
-
-    deallocate(a1)
-
-    return
   end subroutine c2c_1m_y_plan
-
 
   ! Return a FFTW3 plan for multiple 1D c2c FFTs in Z direction
   subroutine c2c_1m_z_plan(plan1, decomp, isign)
@@ -109,27 +126,123 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp
     integer, intent(IN) :: isign
 
-    complex(mytype), allocatable, dimension(:,:,:) :: a1
+    call c2c_1m_plan(plan1, isign, decomp%zsz_loc)
 
-    allocate(a1(decomp%zsz(1),decomp%zsz(2),decomp%zsz(3)))
-
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft(plan1, 1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), a1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), 1, a1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), 1, isign, plan_type)
-#else
-    call sfftw_plan_many_dft(plan1, 1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), a1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), 1, a1, decomp%zsz(3), &
-         decomp%zsz(1)*decomp%zsz(2), 1, isign, plan_type)
-#endif
-
-    deallocate(a1)
-
-    return
   end subroutine c2c_1m_z_plan
 
+  ! Return a FFTW3 plan for multiple 1D r2c FFT
+  subroutine r2c_1m_plan(plan1, nr, nc)
+
+    implicit none
+
+    ! Arguments
+    integer*8, intent(OUT) :: plan1
+    integer, intent(in) :: nr(3), nc(3)
+
+    ! Local variables
+    real(mytype), allocatable, dimension(:,:,:) :: a1
+    complex(mytype), allocatable, dimension(:,:,:) :: a2
+    real(mytype), allocatable, dimension(:,:) :: b1
+    complex(mytype), allocatable, dimension(:,:) :: b2
+
+    if (d2d_intranode) then
+
+      allocate(b1(nr(1), nr(2) * nr(3))) 
+      allocate(b2(nc(1), nc(2) * nc(3)))
+
+#ifdef DOUBLE_PREC
+      call dfftw_plan_many_dft_r2c(plan1, 1, nr(1), &
+           nr(2)*nr(3), b1, nr(1), 1, &
+           nr(1), b2, nc(1), 1, nc(1), &
+           plan_type)
+#else      
+      call sfftw_plan_many_dft_r2c(plan1, 1, nr(1), &           
+           nr(2)*nr(3), b1, nr(1), 1, &                                 
+           nr(1), b2, nc(1), 1, nc(1), &                                 
+           plan_type)
+#endif
+
+      deallocate(b1, b2)
+
+    else
+
+      allocate(a1(nr(1), nr(2), nr(3)))
+      allocate(a2(nc(1), nc(2), nc(3)))
+
+#ifdef DOUBLE_PREC
+      call dfftw_plan_many_dft_r2c(plan1, 1, nr(1), &           
+           nr(2)*nr(3), a1, nr(1), 1, &                                 
+           nr(1), a2, nc(1), 1, nc(1), &                                 
+           plan_type)
+#else      
+      call sfftw_plan_many_dft_r2c(plan1, 1, nr(1), &                                       
+           nr(2)*nr(3), a1, nr(1), 1, &                               
+           nr(1), a2, nc(1), 1, nc(1), &                              
+           plan_type)
+#endif
+
+      deallocate(a1, a2)
+
+    endif
+
+  end subroutine r2c_1m_plan
+
+  ! Return a FFTW3 plan for multiple 1D c2r FFT
+  subroutine c2r_1m_plan(plan1, nc, nr)
+
+    implicit none
+
+    ! Arguments
+    integer*8, intent(OUT) :: plan1
+    integer, intent(in) :: nc(3), nr(3)
+
+    ! Local variables
+    complex(mytype), allocatable, dimension(:,:,:) :: a1
+    real(mytype), allocatable, dimension(:,:,:) :: a2
+    complex(mytype), allocatable, dimension(:,:) :: b1
+    real(mytype), allocatable, dimension(:,:) :: b2
+
+    if (d2d_intranode) then
+
+      allocate(b1(nc(1), nc(2) * nc(3)))
+      allocate(b2(nr(1), nr(2) * nr(3)))
+
+#ifdef DOUBLE_PREC
+    call dfftw_plan_many_dft_c2r(plan1, 1, nr(1), &
+         nr(2)*nr(3), b1, nc(1), 1, &
+         nc(1), b2, nr(1), 1, nr(1), &
+         plan_type)
+#else
+    call sfftw_plan_many_dft_c2r(plan1, 1, nr(1), &
+         nr(2)*nr(3), b1, nc(1), 1, &
+         nc(1), b2, nr(1), 1, nr(1), &
+         plan_type)
+#endif
+
+      deallocate(b1, b2)
+
+    else
+
+      allocate(a1(nc(1), nc(2), nc(3)))
+      allocate(a2(nr(1), nr(2), nr(3)))
+
+#ifdef DOUBLE_PREC
+    call dfftw_plan_many_dft_c2r(plan1, 1, nr(1), &
+         nr(2)*nr(3), a1, nc(1), 1, &
+         nc(1), a2, nr(1), 1, nr(1), &
+         plan_type)
+#else
+    call sfftw_plan_many_dft_c2r(plan1, 1, nr(1), &
+         nr(2)*nr(3), a1, nc(1), 1, &
+         nc(1), a2, nr(1), 1, nr(1), &
+         plan_type)
+#endif
+
+      deallocate(a1, a2)
+
+    endif
+
+  end subroutine c2r_1m_plan
 
   ! Return a FFTW3 plan for multiple 1D r2c FFTs in X direction
   subroutine r2c_1m_x_plan(plan1, decomp_ph, decomp_sp)
@@ -140,25 +253,8 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp_ph
     TYPE(DECOMP_INFO), intent(IN) :: decomp_sp
 
-    real(mytype), allocatable, dimension(:,:,:) :: a1
-    complex(mytype), allocatable, dimension(:,:,:) :: a2
+    call r2c_1m_plan(plan1, decomp_ph%xsz_loc, decomp_sp%xsz_loc)
 
-    allocate(a1(decomp_ph%xsz(1),decomp_ph%xsz(2),decomp_ph%xsz(3)))
-    allocate(a2(decomp_sp%xsz(1),decomp_sp%xsz(2),decomp_sp%xsz(3)))
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft_r2c(plan1, 1, decomp_ph%xsz(1), &
-         decomp_ph%xsz(2)*decomp_ph%xsz(3), a1, decomp_ph%xsz(1), 1, &
-         decomp_ph%xsz(1), a2, decomp_sp%xsz(1), 1, decomp_sp%xsz(1), &
-         plan_type)
-#else
-    call sfftw_plan_many_dft_r2c(plan1, 1, decomp_ph%xsz(1), &
-         decomp_ph%xsz(2)*decomp_ph%xsz(3), a1, decomp_ph%xsz(1), 1, &
-         decomp_ph%xsz(1), a2, decomp_sp%xsz(1), 1, decomp_sp%xsz(1), &
-         plan_type)
-#endif
-    deallocate(a1,a2)    
-
-    return
   end subroutine r2c_1m_x_plan
 
 
@@ -171,25 +267,8 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp_sp
     TYPE(DECOMP_INFO), intent(IN) :: decomp_ph
 
-    complex(mytype), allocatable, dimension(:,:,:) :: a1
-    real(mytype), allocatable, dimension(:,:,:) :: a2
+    call c2r_1m_plan(plan1, decomp_sp%xsz_loc, decomp_ph%xsz_loc)
 
-    allocate(a1(decomp_sp%xsz(1),decomp_sp%xsz(2),decomp_sp%xsz(3)))
-    allocate(a2(decomp_ph%xsz(1),decomp_ph%xsz(2),decomp_ph%xsz(3)))
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft_c2r(plan1, 1, decomp_ph%xsz(1), &
-         decomp_ph%xsz(2)*decomp_ph%xsz(3), a1, decomp_sp%xsz(1), 1, &
-         decomp_sp%xsz(1), a2, decomp_ph%xsz(1), 1, decomp_ph%xsz(1), &
-         plan_type)
-#else
-    call sfftw_plan_many_dft_c2r(plan1, 1, decomp_ph%xsz(1), &
-         decomp_ph%xsz(2)*decomp_ph%xsz(3), a1, decomp_sp%xsz(1), 1, &
-         decomp_sp%xsz(1), a2, decomp_ph%xsz(1), 1, decomp_ph%xsz(1), &
-         plan_type)
-#endif
-    deallocate(a1,a2)
-
-    return
   end subroutine c2r_1m_x_plan
 
 
@@ -202,25 +281,8 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp_ph
     TYPE(DECOMP_INFO), intent(IN) :: decomp_sp
 
-    real(mytype), allocatable, dimension(:,:,:) :: a1
-    complex(mytype), allocatable, dimension(:,:,:) :: a2
+    call r2c_1m_plan(plan1, decomp_ph%zsz_loc, decomp_sp%zsz_loc)
 
-    allocate(a1(decomp_ph%zsz(1),decomp_ph%zsz(2),decomp_ph%zsz(3)))
-    allocate(a2(decomp_sp%zsz(1),decomp_sp%zsz(2),decomp_sp%zsz(3)))
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft_r2c(plan1, 1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), a1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), 1, a2, decomp_sp%zsz(3), &
-         decomp_sp%zsz(1)*decomp_sp%zsz(2), 1, plan_type)
-#else
-    call sfftw_plan_many_dft_r2c(plan1, 1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), a1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), 1, a2, decomp_sp%zsz(3), &
-         decomp_sp%zsz(1)*decomp_sp%zsz(2), 1, plan_type)
-#endif
-    deallocate(a1,a2)
-
-    return
   end subroutine r2c_1m_z_plan
 
 
@@ -233,26 +295,8 @@ module decomp_2d_fft
     TYPE(DECOMP_INFO), intent(IN) :: decomp_sp
     TYPE(DECOMP_INFO), intent(IN) :: decomp_ph
 
-    complex(mytype), allocatable, dimension(:,:,:) :: a1
-    real(mytype), allocatable, dimension(:,:,:) :: a2
+    call c2r_1m_plan(plan1, decomp_sp%zsz_loc, decomp_ph%zsz_loc)
 
-    allocate(a1(decomp_sp%zsz(1),decomp_sp%zsz(2),decomp_sp%zsz(3)))
-    allocate(a2(decomp_ph%zsz(1),decomp_ph%zsz(2),decomp_ph%zsz(3)))
-
-#ifdef DOUBLE_PREC
-    call dfftw_plan_many_dft_c2r(plan1, 1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), a1, decomp_sp%zsz(3), &
-         decomp_sp%zsz(1)*decomp_sp%zsz(2), 1, a2, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), 1, plan_type)
-#else
-    call sfftw_plan_many_dft_c2r(plan1, 1, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), a1, decomp_sp%zsz(3), &
-         decomp_sp%zsz(1)*decomp_sp%zsz(2), 1, a2, decomp_ph%zsz(3), &
-         decomp_ph%zsz(1)*decomp_ph%zsz(2), 1, plan_type)
-#endif
-    deallocate(a1,a2)     
-
-    return
   end subroutine c2r_1m_z_plan
 
 
@@ -307,7 +351,6 @@ module decomp_2d_fft
 
     end if
 
-    return
   end subroutine init_fft_engine
 
 
@@ -330,7 +373,6 @@ module decomp_2d_fft
        end do
     end do
 
-    return
   end subroutine finalize_fft_engine
 
 
@@ -338,7 +380,7 @@ module decomp_2d_fft
   ! the basis of three-dimensional FFTs.
 
   ! c2c transform, multiple 1D FFTs in x direction
-  subroutine c2c_1m_x(inout, isign, plan1)
+  subroutine c2c_1m_x_3d(inout, isign, plan1)
 
     implicit none
 
@@ -352,36 +394,27 @@ module decomp_2d_fft
     call sfftw_execute_dft(plan1, inout, inout)
 #endif
 
-    return
-  end subroutine c2c_1m_x
+  end subroutine c2c_1m_x_3d
+
+  subroutine c2c_1m_x_2d(inout, isign, plan1)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    integer*8, intent(IN) :: plan1
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft(plan1, inout, inout)
+#else
+    call sfftw_execute_dft(plan1, inout, inout)
+#endif
+
+  end subroutine c2c_1m_x_2d
 
 
   ! c2c transform, multiple 1D FFTs in y direction
-  subroutine c2c_1m_y(inout, isign, plan1)
-
-    implicit none
-
-    complex(mytype), dimension(:,:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign
-    integer*8, intent(IN) :: plan1
-
-    integer :: k, s3
-
-    ! transform on one Z-plane at a time
-    s3 = size(inout,3)
-    do k=1,s3
-#ifdef DOUBLE_PREC
-       call dfftw_execute_dft(plan1, inout(:,:,k), inout(:,:,k))
-#else
-       call sfftw_execute_dft(plan1, inout(:,:,k), inout(:,:,k))
-#endif
-    end do
-
-    return
-  end subroutine c2c_1m_y
-
-  ! c2c transform, multiple 1D FFTs in z direction
-  subroutine c2c_1m_z(inout, isign, plan1)
+  subroutine c2c_1m_y_3d(inout, isign, plan1)
 
     implicit none
 
@@ -395,11 +428,59 @@ module decomp_2d_fft
     call sfftw_execute_dft(plan1, inout, inout)
 #endif
 
-    return
-  end subroutine c2c_1m_z
+  end subroutine c2c_1m_y_3d
+
+  subroutine c2c_1m_y_2d(inout, isign, plan1)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    integer*8, intent(IN) :: plan1
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft(plan1, inout, inout)
+#else
+    call sfftw_execute_dft(plan1, inout, inout)
+#endif
+
+  end subroutine c2c_1m_y_2d
+
+  ! c2c transform, multiple 1D FFTs in z direction
+  subroutine c2c_1m_z_3d(inout, isign, plan1)
+
+    implicit none
+
+    complex(mytype), dimension(:,:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    integer*8, intent(IN) :: plan1
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft(plan1, inout, inout)
+#else
+    call sfftw_execute_dft(plan1, inout, inout)
+#endif
+
+  end subroutine c2c_1m_z_3d
+
+  subroutine c2c_1m_z_2d(inout, isign, plan1)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(INOUT) :: inout
+    integer, intent(IN) :: isign
+    integer*8, intent(IN) :: plan1
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft(plan1, inout, inout)
+#else
+    call sfftw_execute_dft(plan1, inout, inout)
+#endif
+
+  end subroutine c2c_1m_z_2d
 
   ! r2c transform, multiple 1D FFTs in x direction
-  subroutine r2c_1m_x(input, output)
+  subroutine r2c_1m_x_3d(input, output)
 
     implicit none
 
@@ -412,12 +493,25 @@ module decomp_2d_fft
     call sfftw_execute_dft_r2c(plan(0,1), input, output)
 #endif    
 
-    return
+  end subroutine r2c_1m_x_3d
 
-  end subroutine r2c_1m_x
+  subroutine r2c_1m_x_2d(input, output)
+
+    implicit none
+
+    real(mytype), dimension(:,:), intent(IN)  ::  input
+    complex(mytype), dimension(:,:), intent(OUT) :: output
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft_r2c(plan(0,1), input, output)
+#else
+    call sfftw_execute_dft_r2c(plan(0,1), input, output)
+#endif    
+
+  end subroutine r2c_1m_x_2d
 
   ! r2c transform, multiple 1D FFTs in z direction
-  subroutine r2c_1m_z(input, output)
+  subroutine r2c_1m_z_3d(input, output)
 
     implicit none
 
@@ -430,12 +524,25 @@ module decomp_2d_fft
     call sfftw_execute_dft_r2c(plan(0,3), input, output)
 #endif
 
-    return
+  end subroutine r2c_1m_z_3d
 
-  end subroutine r2c_1m_z
+  subroutine r2c_1m_z_2d(input, output)
+
+    implicit none
+
+    real(mytype), dimension(:,:), intent(IN)  ::  input
+    complex(mytype), dimension(:,:), intent(OUT) :: output
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft_r2c(plan(0,3), input, output)
+#else
+    call sfftw_execute_dft_r2c(plan(0,3), input, output)
+#endif
+
+  end subroutine r2c_1m_z_2d
 
   ! c2r transform, multiple 1D FFTs in x direction
-  subroutine c2r_1m_x(input, output)
+  subroutine c2r_1m_x_3d(input, output)
 
     implicit none
 
@@ -448,12 +555,25 @@ module decomp_2d_fft
     call sfftw_execute_dft_c2r(plan(2,1), input, output)
 #endif
 
-    return
+  end subroutine c2r_1m_x_3d
 
-  end subroutine c2r_1m_x
+  subroutine c2r_1m_x_2d(input, output)
+
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(IN)  ::  input
+    real(mytype), dimension(:,:), intent(OUT) :: output
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft_c2r(plan(2,1), input, output)
+#else
+    call sfftw_execute_dft_c2r(plan(2,1), input, output)
+#endif
+
+  end subroutine c2r_1m_x_2d
 
   ! c2r transform, multiple 1D FFTs in z direction
-  subroutine c2r_1m_z(input, output)
+  subroutine c2r_1m_z_3d(input, output)
 
     implicit none
 
@@ -466,10 +586,22 @@ module decomp_2d_fft
     call sfftw_execute_dft_c2r(plan(2,3), input, output)
 #endif    
 
-    return
+  end subroutine c2r_1m_z_3d
 
-  end subroutine c2r_1m_z
+  subroutine c2r_1m_z_2d(input, output)
 
+    implicit none
+
+    complex(mytype), dimension(:,:), intent(IN) :: input
+    real(mytype), dimension(:,:), intent(OUT) :: output
+
+#ifdef DOUBLE_PREC
+    call dfftw_execute_dft_c2r(plan(2,3), input, output)
+#else
+    call sfftw_execute_dft_c2r(plan(2,3), input, output)
+#endif    
+
+  end subroutine c2r_1m_z_2d
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -479,12 +611,12 @@ module decomp_2d_fft
 
     implicit none
 
-    complex(mytype), dimension(:,:,:), intent(INOUT) :: in
-    complex(mytype), dimension(:,:,:), intent(OUT) :: out
+    type(decomp_data), intent(inout) :: in
+    type(decomp_data), intent(inout) :: out
     integer, intent(IN) :: isign
 
 #ifndef OVERWRITE
-    complex(mytype), allocatable, dimension(:,:,:) :: wk1
+    type(decomp_data) :: wk1
 #endif
 
     if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_FORWARD .OR.  &
@@ -492,41 +624,25 @@ module decomp_2d_fft
 
        ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
-       call c2c_1m_x(in,isign,plan(isign,1))
+       call c2c_1m_x(in%cvar,isign,plan(isign,1))
 #else
-       allocate (wk1(ph%xsz(1),ph%xsz(2),ph%xsz(3)))
-       wk1 = in
-       call c2c_1m_x(wk1,isign,plan(isign,1))
+       call wk1%copy(in)
+       wk1%cvar = in%cvar
+       call c2c_1m_x(wk1%cvar,isign,plan(isign,1))
 #endif
 
        ! ===== Swap X --> Y; 1D FFTs in Y =====
 
-       if (dims(1)>1) then
 #ifdef OVERWRITE
-          call transpose_x_to_y(in,wk2_c2c,ph)
+       call transpose_x_to_y(in,wk2_c2c)
 #else
-          call transpose_x_to_y(wk1,wk2_c2c,ph)
+       call transpose_x_to_y(wk1,wk2_c2c)
 #endif
-          call c2c_1m_y(wk2_c2c,isign,plan(isign,2))
-       else
-#ifdef OVERWRITE
-          call c2c_1m_y(in,isign,plan(isign,2))
-#else
-          call c2c_1m_y(wk1,isign,plan(isign,2))
-#endif
-       end if
+       call c2c_1m_y(wk2_c2c%cvar,isign,plan(isign,2))
 
        ! ===== Swap Y --> Z; 1D FFTs in Z =====
-       if (dims(1)>1) then
-          call transpose_y_to_z(wk2_c2c,out,ph)
-       else
-#ifdef OVERWRITE
-          call transpose_y_to_z(in,out,ph)
-#else
-          call transpose_y_to_z(wk1,out,ph)
-#endif
-       end if
-       call c2c_1m_z(out,isign,plan(isign,3))
+       call transpose_y_to_z(wk2_c2c,out)
+       call c2c_1m_z(out%cvar,isign,plan(isign,3))
 
     else if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_BACKWARD &
          .OR. & 
@@ -534,45 +650,49 @@ module decomp_2d_fft
 
        ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
-       call c2c_1m_z(in,isign,plan(isign,3))
+       call c2c_1m_z(in%cvar,isign,plan(isign,3))
 #else
-       allocate (wk1(ph%zsz(1),ph%zsz(2),ph%zsz(3)))
-       wk1 = in
-       call c2c_1m_z(wk1,isign,plan(isign,3))
+       call wk1%copy(in)
+       wk1%cvar = in%cvar
+       call c2c_1m_z(wk1%cvar,isign,plan(isign,3))
 #endif
 
        ! ===== Swap Z --> Y; 1D FFTs in Y =====
-       if (dims(1)>1) then
 #ifdef OVERWRITE
-          call transpose_z_to_y(in,wk2_c2c,ph)
+       call transpose_z_to_y(in,wk2_c2c)
 #else
-          call transpose_z_to_y(wk1,wk2_c2c,ph)
+       call transpose_z_to_y(wk1,wk2_c2c)
 #endif
-          call c2c_1m_y(wk2_c2c,isign,plan(isign,2))
-       else  ! out==wk2_c2c if 1D decomposition
-#ifdef OVERWRITE
-          call transpose_z_to_y(in,out,ph)
-#else
-          call transpose_z_to_y(wk1,out,ph)
-#endif
-          call c2c_1m_y(out,isign,plan(isign,2))
-       end if
+       call c2c_1m_y(wk2_c2c%cvar,isign,plan(isign,2))
 
        ! ===== Swap Y --> X; 1D FFTs in X =====
-       if (dims(1)>1) then
-          call transpose_y_to_x(wk2_c2c,out,ph)
-       end if
-       call c2c_1m_x(out,isign,plan(isign,1))
+       call transpose_y_to_x(wk2_c2c,out)
+       call c2c_1m_x(out%cvar,isign,plan(isign,1))
 
     end if
 
 #ifndef OVERWRITE
-    deallocate (wk1)
+    call wk1%fin
 #endif
 
     return
   end subroutine fft_3d_c2c
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! 3D forward FFT - real to complex
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine fft_3d_rc2rc(in, out)
+
+     implicit none
+
+     type(decomp_data), intent(INOUT) :: in
+     type(decomp_data), intent(INOUT) :: out
+
+     if (in%is_cplx .and. (.not.out%is_cplx)) call fft_3d_c2r(in, out)
+
+     if ((.not.in%is_cplx) .and. out%is_cplx) call fft_3d_r2c(in, out)
+
+  end subroutine fft_3d_rc2rc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! 3D forward FFT - real to complex
@@ -581,49 +701,34 @@ module decomp_2d_fft
 
     implicit none
 
-    real(mytype), dimension(:,:,:), intent(IN) :: in_r
-    complex(mytype), dimension(:,:,:), intent(OUT) :: out_c
+    type(decomp_data), intent(in) :: in_r
+    type(decomp_data), intent(inout) :: out_c
 
     if (format==PHYSICAL_IN_X) then
 
        ! ===== 1D FFTs in X =====
-       call r2c_1m_x(in_r,wk13)
+       call r2c_1m_x(in_r%var,wk13%cvar)
 
        ! ===== Swap X --> Y; 1D FFTs in Y =====
-       if (dims(1)>1) then
-          call transpose_x_to_y(wk13,wk2_r2c,sp)
-          call c2c_1m_y(wk2_r2c,-1,plan(0,2))
-       else
-          call c2c_1m_y(wk13,-1,plan(0,2))
-       end if
+       call transpose_x_to_y(wk13,wk2_r2c)
+       call c2c_1m_y(wk2_r2c%cvar,-1,plan(0,2))
 
        ! ===== Swap Y --> Z; 1D FFTs in Z =====
-       if (dims(1)>1) then
-          call transpose_y_to_z(wk2_r2c,out_c,sp)
-       else
-          call transpose_y_to_z(wk13,out_c,sp)
-       end if
-       call c2c_1m_z(out_c,-1,plan(0,3))
+       call transpose_y_to_z(wk2_r2c,out_c)
+       call c2c_1m_z(out_c%cvar,-1,plan(0,3))
 
     else if (format==PHYSICAL_IN_Z) then
 
        ! ===== 1D FFTs in Z =====
-       call r2c_1m_z(in_r,wk13)
+       call r2c_1m_z(in_r%var,wk13%cvar)
 
        ! ===== Swap Z --> Y; 1D FFTs in Y =====
-       if (dims(1)>1) then
-          call transpose_z_to_y(wk13,wk2_r2c,sp)
-          call c2c_1m_y(wk2_r2c,-1,plan(0,2))
-       else  ! out_c==wk2_r2c if 1D decomposition
-          call transpose_z_to_y(wk13,out_c,sp)
-          call c2c_1m_y(out_c,-1,plan(0,2))
-       end if
+       call transpose_z_to_y(wk13,wk2_r2c)
+       call c2c_1m_y(wk2_r2c%cvar,-1,plan(0,2))
 
        ! ===== Swap Y --> X; 1D FFTs in X =====
-       if (dims(1)>1) then
-          call transpose_y_to_x(wk2_r2c,out_c,sp)
-       end if
-       call c2c_1m_x(out_c,-1,plan(0,1))
+       call transpose_y_to_x(wk2_r2c,out_c)
+       call c2c_1m_x(out_c%cvar,-1,plan(0,1))
 
     end if
 
@@ -638,83 +743,97 @@ module decomp_2d_fft
 
     implicit none
 
-    complex(mytype), dimension(:,:,:), intent(INOUT) :: in_c
-    real(mytype), dimension(:,:,:), intent(OUT) :: out_r
+    type(decomp_data), intent(inout) :: in_c
+    type(decomp_data), intent(inout) :: out_r
 
 #ifndef OVERWRITE
-    complex(mytype), allocatable, dimension(:,:,:) :: wk1
+    type(decomp_data) :: wk1
 #endif
 
     if (format==PHYSICAL_IN_X) then
 
        ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
-       call c2c_1m_z(in_c,1,plan(2,3))       
+       if (d2d_intranode) then
+          call c2c_1m_z(in_c%cvar2d,1,plan(2,3))
+       else
+          call c2c_1m_z(in_c%cvar,1,plan(2,3))
+       endif
 #else
-       allocate (wk1(sp%zsz(1),sp%zsz(2),sp%zsz(3)))
-       wk1 = in_c
-       call c2c_1m_z(wk1,1,plan(2,3))
+       call wk1%copy(in_c)
+       if (d2d_intranode) then
+          wk1%cvar2d = in_c%cvar2d
+          call c2c_1m_z(wk1%cvar2d,1,plan(2,3))
+       else
+          wk1%cvar = in_c%cvar
+          call c2c_1m_z(wk1%cvar,1,plan(2,3))
+       endif
 #endif
 
        ! ===== Swap Z --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-       call transpose_z_to_y(in_c,wk2_r2c,sp)
+       call transpose_z_to_y(in_c,wk2_r2c)
 #else
-       call transpose_z_to_y(wk1,wk2_r2c,sp)
+       call transpose_z_to_y(wk1,wk2_r2c)
 #endif
-       call c2c_1m_y(wk2_r2c,1,plan(2,2))
+       if (d2d_intranode) then
+          call c2c_1m_y(wk2_r2c%cvar2d,1,plan(2,2))
+       else
+          call c2c_1m_y(wk2_r2c%cvar,1,plan(2,2))
+       endif
 
        ! ===== Swap Y --> X; 1D FFTs in X =====
-       if (dims(1)>1) then
-          call transpose_y_to_x(wk2_r2c,wk13,sp)
-          call c2r_1m_x(wk13,out_r)
+       call transpose_y_to_x(wk2_r2c,wk13)
+       if (d2d_intranode) then
+          call c2r_1m_x(wk13%cvar2d,out_r%var2d)
        else
-          call c2r_1m_x(wk2_r2c,out_r)
-       end if
+          call c2r_1m_x(wk13%cvar,out_r%var)
+       endif
 
     else if (format==PHYSICAL_IN_Z) then
 
        ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
-       call c2c_1m_x(in_c,1,plan(2,1))
+       if (d2d_intranode) then
+          call c2c_1m_x(in_c%cvar2d,1,plan(2,1))
+       else
+          call c2c_1m_x(in_c%cvar,1,plan(2,1))
+       endif
 #else
-       allocate(wk1(sp%xsz(1),sp%xsz(2),sp%xsz(3)))
-       wk1 = in_c
-       call c2c_1m_x(wk1,1,plan(2,1))
+       call wk1%copy(in_c)
+       if (d2d_intranode) then
+          wk1%cvar2d = in_c%cvar2d
+          call c2c_1m_x(wk1%cvar2d,1,plan(2,1))
+       else
+          wk1%cvar = in_c%cvar
+          call c2c_1m_x(wk1%cvar,1,plan(2,1))
+       endif
 #endif
 
        ! ===== Swap X --> Y; 1D FFTs in Y =====
-       if (dims(1)>1) then
 #ifdef OVERWRITE
-          call transpose_x_to_y(in_c,wk2_r2c,sp)
+       call transpose_x_to_y(in_c,wk2_r2c)
 #else
-          call transpose_x_to_y(wk1,wk2_r2c,sp)
+       call transpose_x_to_y(wk1,wk2_r2c)
 #endif
-          call c2c_1m_y(wk2_r2c,1,plan(2,2))
-       else  ! in_c==wk2_r2c if 1D decomposition
-#ifdef OVERWRITE
-          call c2c_1m_y(in_c,1,plan(2,2))
-#else
-          call c2c_1m_y(wk1,1,plan(2,2))
-#endif
-       end if
+       if (d2d_intranode) then
+          call c2c_1m_y(wk2_r2c%cvar2d,1,plan(2,2))
+       else
+          call c2c_1m_y(wk2_r2c%cvar,1,plan(2,2))
+       endif
 
        ! ===== Swap Y --> Z; 1D FFTs in Z =====
-       if (dims(1)>1) then
-          call transpose_y_to_z(wk2_r2c,wk13,sp)
+       call transpose_y_to_z(wk2_r2c,wk13)
+       if (d2d_intranode) then
+          call c2r_1m_z(wk13%cvar2d,out_r%var2d)
        else
-#ifdef OVERWRITE
-          call transpose_y_to_z(in_c,wk13,sp)
-#else
-          call transpose_y_to_z(wk1,wk13,sp)
-#endif
-       end if
-       call c2r_1m_z(wk13,out_r)
+          call c2r_1m_z(wk13%cvar,out_r%var)
+       endif
 
     end if
 
 #ifndef OVERWRITE
-    deallocate (wk1)
+    call wk1%fin
 #endif
 
     return
