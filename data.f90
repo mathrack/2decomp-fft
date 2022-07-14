@@ -125,6 +125,8 @@ contains
    !
    ! Initialize the object using an existing one
    !
+   ! THIS DOES NOT COPY THE CONTENT OF THE EXISTING OBJECT
+   !
    module subroutine decomp_data_init_copy(self, dat)
 
       implicit none
