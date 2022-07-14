@@ -517,7 +517,7 @@ contains
       maxloclen = max(decomp%xsz_loc(3), decomp%ysz_loc(3))
       maxloclen = max(decomp%zsz_loc(3), maxloclen)
 
-      ! Allocate and init aps
+      ! Allocate and init maps
       ! 1 = transpose_x_to_y
       ! 2 = transpose_y_to_x
       ! 3 = transpose_y_to_z
@@ -538,6 +538,7 @@ contains
       n1 = decomp%xsz(1)
       n2 = decomp%xsz(2)
       n3 = decomp%xsz(3)
+      datx%var2d = 0
       call decomp_2d_win_fence(datx%win)
       if (nrank_loc == 0) then
          do m = 0, iproc - 1
@@ -574,10 +575,12 @@ contains
             end do
          end do
       end do
+      datx%var2d = 0
       ! merge
       n1 = decomp%ysz(1)
       n2 = decomp%ysz(2)
       n3 = decomp%ysz(3)
+      daty%var2d = 0
       call decomp_2d_win_fence(daty%win)
       if (nrank_loc == 0) then
          do m = 0, iproc - 1
@@ -614,6 +617,7 @@ contains
             end do
          end do
       end do
+      daty%var2d = 0
 
       ! transpose_y_to_x
       iproc = dims(1)
@@ -621,6 +625,7 @@ contains
       n1 = decomp%ysz(1)
       n2 = decomp%ysz(2)
       n3 = decomp%ysz(3)
+      daty%var2d = 0
       call decomp_2d_win_fence(daty%win)
       if (nrank_loc == 0) then
          do m = 0, iproc - 1
@@ -657,10 +662,12 @@ contains
             enddo
          enddo
       enddo
+      daty%var2d = 0
       ! merge
       n1 = decomp%xsz(1)
       n2 = decomp%xsz(2)
       n3 = decomp%xsz(3)
+      datx%var2d = 0
       call decomp_2d_win_fence(datx%win)
       if (nrank_loc == 0) then
          do m=0,iproc-1
@@ -697,6 +704,7 @@ contains
             enddo
          enddo
       enddo
+      datx%var2d = 0
 
       ! transpose_y_to_z
       iproc = dims(2)
@@ -704,6 +712,7 @@ contains
       n1 = decomp%ysz(1)
       n2 = decomp%ysz(2)
       n3 = decomp%ysz(3)
+      daty%var2d = 0
       call decomp_2d_win_fence(daty%win)
       if (nrank_loc == 0) then
          do m = 0, iproc-1
@@ -740,10 +749,12 @@ contains
             enddo
          enddo
       enddo
+      daty%var2d = 0
       ! merge
       n1 = decomp%zsz(1)
       n2 = decomp%zsz(2)
       n3 = decomp%zsz(3)
+      datz%var2d = 0
       call decomp_2d_win_fence(datz%win)
       if (nrank_loc == 0) then
          do m = 0, iproc-1
@@ -780,6 +791,7 @@ contains
             enddo
          enddo
       enddo
+      datz%var2d = 0
 
       ! transpose_z_to_y
       iproc = dims(2)
@@ -787,6 +799,7 @@ contains
       n1 = decomp%zsz(1)
       n2 = decomp%zsz(2)
       n3 = decomp%zsz(3)
+      datz%var2d = 0
       call decomp_2d_win_fence(datz%win)
       if (nrank_loc == 0) then
          do m=0,iproc-1
@@ -823,10 +836,12 @@ contains
             enddo
          enddo
       enddo
+      datz%var2d = 0
       ! merge
       n1 = decomp%ysz(1)
       n2 = decomp%ysz(2)
       n3 = decomp%ysz(3)
+      daty%var2d = 0
       call decomp_2d_win_fence(daty%win)
       if (nrank_loc == 0) then
          do m=0,iproc-1
@@ -863,6 +878,7 @@ contains
             enddo
          enddo
       enddo
+      daty%var2d = 0
 
       ! Clean
       call datx%fin()

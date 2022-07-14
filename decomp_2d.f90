@@ -217,26 +217,18 @@ module decomp_2d
 
   interface transpose_x_to_y
      module procedure transpose_x_to_y_data
-     module procedure transpose_x_to_y_real
-     module procedure transpose_x_to_y_complex
   end interface transpose_x_to_y
 
   interface transpose_y_to_z
      module procedure transpose_y_to_z_data
-     module procedure transpose_y_to_z_real
-     module procedure transpose_y_to_z_complex
   end interface transpose_y_to_z
 
   interface transpose_z_to_y
      module procedure transpose_z_to_y_data
-     module procedure transpose_z_to_y_real
-     module procedure transpose_z_to_y_complex
   end interface transpose_z_to_y
 
   interface transpose_y_to_x
      module procedure transpose_y_to_x_data
-     module procedure transpose_y_to_x_real
-     module procedure transpose_y_to_x_complex
   end interface transpose_y_to_x
 
   interface update_halo
@@ -507,7 +499,7 @@ contains
        ! No MPI3 shared memory
        d2d_intranode = .false.
        DECOMP_2D_LOCALCOMM = MPI_COMM_NULL
-       nrank_loc = -1
+       nrank_loc = 0
        nproc_loc = -1
     endif
 

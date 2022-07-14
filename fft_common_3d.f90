@@ -15,31 +15,22 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 3D FFT - complex to complex
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine fft_3d_c2c(in, out, isign, in_2d, out_2d, in_win, out_win)
+
+subroutine fft_3d_c2c(in, out, isign)
 
 implicit none
 
-complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in
-complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out
+! Arguments
+type(decomp_data), intent(INOUT) :: in
+type(decomp_data), intent(INOUT) :: out
 integer, intent(IN) :: isign
-complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: in_2d
-complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: out_2d
-integer, intent(in), optional :: in_win, out_win
 
+! Local variables
 integer :: i, j, k
 
 #ifndef OVERWRITE
-integer :: wk1_win
-complex(mytype), pointer, dimension(:,:,:) :: wk1
-complex(mytype), pointer, dimension(:,:) :: wk1_2d
+type(decomp_data) :: wk1
 #endif
-
-! Safety check
-if (d2d_intranode) then
-   if (.not.present(in_2d) .or. .not.present(out_2d) .or. &
-       .not.present(in_win) .or. .not.present(out_win)) &
-      call decomp_2d_abort(__FILE__, __LINE__, 0, "Incorrect arguments")
-endif
 
 if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_FORWARD .OR.  &
 format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
@@ -47,45 +38,40 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call c2c_1m_x(in_2d,isign,ph)
+call c2c_1m_x(in%cvar2d,isign,ph)
 else
-call c2c_1m_x(in,isign,ph)
+call c2c_1m_x(in%cvar,isign,ph)
 endif
 #else
+call wk1%init(is_cplx=.true., idir=1, decomp=ph)
 if (d2d_intranode) then
-call alloc_x(wk1, var2d=wk1_2d, win=wk1_win)
-do concurrent (k=1:ph%xsz_loc(3), i=1:ph%xsz_loc(1))
-wk1_2d(i,k) = in_2d(i,k)
-end do
-call c2c_1m_x(wk1_2d,isign,ph)
+wk1%cvar2d = in%cvar2d
+call c2c_1m_x(wk1%cvar2d,isign,ph)
 else
-call alloc_x(wk1)
-do concurrent (k=1:ph%xsz(3), j=1:ph%xsz(2), i=1:ph%xsz(1))
-wk1(i,j,k) = in(i,j,k)
-end do
-call c2c_1m_x(wk1,isign,ph)
+wk1%cvar = in%cvar
+call c2c_1m_x(wk1%cvar,isign,ph)
 endif
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 
 #ifdef OVERWRITE
-call transpose_x_to_y(in,wk2_c2c,ph,in_win,wk2_c2c_win)
+call transpose_x_to_y(in,wk2_c2c)
 #else
-call transpose_x_to_y(wk1,wk2_c2c,ph,wk1_win,wk2_c2c_win)
+call transpose_x_to_y(wk1,wk2_c2c)
 #endif
 if (d2d_intranode) then
-call c2c_1m_y(wk2_c2c_2d,isign,ph)
+call c2c_1m_y(wk2_c2c%cvar2d,isign,ph)
 else
-call c2c_1m_y(wk2_c2c,isign,ph)
+call c2c_1m_y(wk2_c2c%cvar,isign,ph)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_c2c,out,ph,wk2_c2c_win,out_win)
+call transpose_y_to_z(wk2_c2c,out)
 if (d2d_intranode) then
-call c2c_1m_z(out_2d,isign,ph)
+call c2c_1m_z(out%cvar2d,isign,ph)
 else
-call c2c_1m_z(out,isign,ph)
+call c2c_1m_z(out%cvar,isign,ph)
 endif
 
 else if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_BACKWARD &
@@ -95,127 +81,125 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_FORWARD) then
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call c2c_1m_z(in_2d,isign,ph)
+call c2c_1m_z(in%cvar2d,isign,ph)
 else
-call c2c_1m_z(in,isign,ph)
+call c2c_1m_z(in%cvar,isign,ph)
 endif
 #else
+call wk1%init(is_cplx=.true., idir=3, decomp=ph)
 if (d2d_intranode) then
-call alloc_z(wk1, var2d=wk1_2d, win=wk1_win)
-do concurrent (k=1:ph%zsz_loc(3), i=1:ph%zsz_loc(1))
-wk1_2d(i,k) = in_2d(i,k)
-end do
-call c2c_1m_z(wk1_2d,isign,ph)
+wk1%cvar2d = in%cvar2d
+call c2c_1m_z(wk1%cvar2d,isign,ph)
 else
-call alloc_z(wk1)
-do concurrent (k=1:ph%zsz(3), j=1:ph%zsz(2), i=1:ph%zsz(1))
-wk1(i,j,k) = in(i,j,k)
-end do
-call c2c_1m_z(wk1,isign,ph)
+wk1%cvar = in%cvar
+call c2c_1m_z(wk1%cvar,isign,ph)
 endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_z_to_y(in,wk2_c2c,ph,in_win,wk2_c2c_win)
+call transpose_z_to_y(in,wk2_c2c)
 #else
-call transpose_z_to_y(wk1,wk2_c2c,ph,wk1_win,wk2_c2c_win)
+call transpose_z_to_y(wk1,wk2_c2c)
 #endif
 if (d2d_intranode) then
-call c2c_1m_y(wk2_c2c_2d,isign,ph)
+call c2c_1m_y(wk2_c2c%cvar2d,isign,ph)
 else
-call c2c_1m_y(wk2_c2c,isign,ph)
+call c2c_1m_y(wk2_c2c%cvar,isign,ph)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_c2c,out,ph,wk2_c2c_win,out_win)
+call transpose_y_to_x(wk2_c2c,out)
 if (d2d_intranode) then
-call c2c_1m_x(out_2d,isign,ph)
+call c2c_1m_x(out%cvar2d,isign,ph)
 else
-call c2c_1m_x(out,isign,ph)
+call c2c_1m_x(out%cvar,isign,ph)
 endif
 
 end if
 
 #ifndef OVERWRITE
 ! Free memory
-if (associated(wk1)) nullify(wk1)
-if (associated(wk1_2d)) nullify(wk1_2d)
-if (d2d_intranode) call decomp_2d_win_free(wk1_win)
+call wk1%fin
 #endif
 
 return
 end subroutine fft_3d_c2c
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! 3D forward FFT - real to complex
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine fft_3d_rc2rc(in, out)
+
+implicit none
+
+type(decomp_data), intent(INOUT) :: in
+type(decomp_data), intent(INOUT) :: out
+
+if (in%is_cplx .and. (.not.out%is_cplx)) call fft_3d_c2r(in, out)
+
+if ((.not.in%is_cplx) .and. out%is_cplx) call fft_3d_r2c(in, out)
+
+end subroutine fft_3d_rc2rc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 3D forward FFT - real to complex
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine fft_3d_r2c(in_r, out_c, in_r_2d, out_c_2d, in_r_win, out_c_win)
+subroutine fft_3d_r2c(in_r, out_c)
 
 implicit none
 
-real(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in_r
-complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out_c
-real(mytype), dimension(:,:), pointer, intent(INOUT), optional :: in_r_2d
-complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: out_c_2d
-integer, intent(in), optional :: in_r_win, out_c_win
-
-! Safety check
-if (d2d_intranode) then
-   if (.not.present(in_r_2d) .or. .not.present(out_c_2d) .or. &
-       .not.present(in_r_win) .or. .not.present(out_c_win)) &
-      call decomp_2d_abort(__FILE__, __LINE__, 0, "Incorrect arguments")
-endif
+type(decomp_data), intent(INOUT) :: in_r
+type(decomp_data), intent(INOUT) :: out_c
 
 if (format==PHYSICAL_IN_X) then
 
 ! ===== 1D FFTs in X =====
 if (d2d_intranode) then
-call r2c_1m_x(in_r_2d,wk13_2d)
+call r2c_1m_x(in_r%var2d,wk13%cvar2d)
 else
-call r2c_1m_x(in_r,wk13)
+call r2c_1m_x(in_r%var,wk13%cvar)
 endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
-call transpose_x_to_y(wk13,wk2_r2c,sp,wk13_win,wk2_r2c_win)
+call transpose_x_to_y(wk13,wk2_r2c)
 if (d2d_intranode) then
-call c2c_1m_y(wk2_r2c_2d,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
 else
-call c2c_1m_y(wk2_r2c,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar,-1,sp)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_r2c,out_c,sp,wk2_r2c_win,out_c_win)
+call transpose_y_to_z(wk2_r2c,out_c)
 if (d2d_intranode) then
-call c2c_1m_z(out_c_2d,-1,sp)
+call c2c_1m_z(out_c%cvar2d,-1,sp)
 else
-call c2c_1m_z(out_c,-1,sp)
+call c2c_1m_z(out_c%cvar,-1,sp)
 endif
 
 else if (format==PHYSICAL_IN_Z) then
 
 ! ===== 1D FFTs in Z =====
 if (d2d_intranode) then
-call r2c_1m_z(in_r_2d,wk13_2d)
+call r2c_1m_z(in_r%var2d,wk13%cvar2d)
 else
-call r2c_1m_z(in_r,wk13)
+call r2c_1m_z(in_r%var,wk13%cvar)
 endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
-call transpose_z_to_y(wk13,wk2_r2c,sp,wk13_win,wk2_r2c_win)
+call transpose_z_to_y(wk13,wk2_r2c)
 if (d2d_intranode) then
-call c2c_1m_y(wk2_r2c_2d,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
 else
-call c2c_1m_y(wk2_r2c,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar,-1,sp)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_r2c,out_c,sp,wk2_r2c_win,out_c_win)
+call transpose_y_to_x(wk2_r2c,out_c)
 if (d2d_intranode) then
-call c2c_1m_x(out_c_2d,-1,sp)
+call c2c_1m_x(out_c%cvar2d,-1,sp)
 else
-call c2c_1m_x(out_c,-1,sp)
+call c2c_1m_x(out_c%cvar,-1,sp)
 endif
 
 endif
@@ -226,22 +210,17 @@ end subroutine fft_3d_r2c
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! 3D inverse FFT - complex to real
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine fft_3d_c2r(in_c, out_r, in_c_2d, out_r_2d, in_c_win, out_r_win)
+subroutine fft_3d_c2r(in_c, out_r)
 
 implicit none
 
-complex(mytype), dimension(:,:,:), pointer, intent(INOUT) :: in_c
-real(mytype), dimension(:,:,:), pointer, intent(INOUT) :: out_r
-complex(mytype), dimension(:,:), pointer, intent(INOUT), optional :: in_c_2d
-real(mytype), dimension(:,:), pointer, intent(INOUT), optional :: out_r_2d
-integer, intent(in), optional :: in_c_win, out_r_win
+! Arguments
+type(decomp_data), intent(INOUT) :: in_c
+type(decomp_data), intent(INOUT) :: out_r
 
-integer :: i, j, k
-
+! local variables
 #ifndef OVERWRITE
-complex(mytype), pointer, dimension(:,:,:) :: wk1
-complex(mytype), pointer, dimension(:,:) :: wk1_2d
-integer :: wk1_win
+type(decomp_data) :: wk1
 #endif
 
 if (format==PHYSICAL_IN_X) then
@@ -249,44 +228,39 @@ if (format==PHYSICAL_IN_X) then
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call c2c_1m_z(in_c_2d,1,sp)
+call c2c_1m_z(in_c%cvar2d,1,sp)
 else
-call c2c_1m_z(in_c,1,sp)
+call c2c_1m_z(in_c%cvar,1,sp)
 endif
 #else
+call wk1%init(is_cplx=.true., idir=1, decomp=sp)
 if (d2d_intranode) then
-call alloc_z(wk1, var2d=wk1_2d, opt_decomp=sp, win=wk1_win)
-do concurrent (k=1:sp%zsz_loc(3), i=1:sp%zsz_loc(1))
-wk1_2d(i,k) = in_c_2d(i,k)
-end do
-call c2c_1m_z(wk1_2d,1,sp)
+wk1%cvar2d = in_c%cvar2d
+call c2c_1m_z(wk1%cvar2d,1,sp)
 else
-call alloc_z(wk1, opt_decomp=sp)
-do concurrent (k=1:sp%zsz(3), j=1:sp%zsz(2), i=1:sp%zsz(1))
-wk1(i,j,k) = in_c(i,j,k)
-end do
-call c2c_1m_z(wk1,1,sp)
+wk1%cvar = in_c%cvar
+call c2c_1m_z(wk1%cvar,1,sp)
 endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_z_to_y(in_c,wk2_r2c,sp,in_c_win,wk2_r2c_win)
+call transpose_z_to_y(in_c,wk2_r2c)
 #else
-call transpose_z_to_y(wk1,wk2_r2c,sp,wk1_win,wk2_r2c_win)
+call transpose_z_to_y(wk1,wk2_r2c)
 #endif
 if (d2d_intranode) then
-call c2c_1m_y(wk2_r2c_2d,1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
 else
-call c2c_1m_y(wk2_r2c,1,sp)
+call c2c_1m_y(wk2_r2c%cvar,1,sp)
 endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
-call transpose_y_to_x(wk2_r2c,wk13,sp,wk2_r2c_win,wk13_win)
+call transpose_y_to_x(wk2_r2c,wk13)
 if (d2d_intranode) then
-call c2r_1m_x(wk13_2d,out_r_2d)
+call c2r_1m_x(wk13%cvar2d,out_r%var2d)
 else
-call c2r_1m_x(wk13,out_r)
+call c2r_1m_x(wk13%cvar,out_r%var)
 endif
 
 else if (format==PHYSICAL_IN_Z) then
@@ -294,53 +268,46 @@ else if (format==PHYSICAL_IN_Z) then
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
 if (d2d_intranode) then
-call c2c_1m_x(in_c_2d,1,sp)
+call c2c_1m_x(in_c%cvar2d,1,sp)
 else
-call c2c_1m_x(in_c,1,sp)
+call c2c_1m_x(in_c%cvar,1,sp)
 endif
 #else
+call wk1%init(is_cplx=.true., idir=1, decomp=sp)
 if (d2d_intranode) then
-call alloc_x(wk1, var2d=wk1_2d, opt_decomp=sp, win=wk1_win)
-do concurrent (k=1:sp%xsz_loc(3), i=1:sp%xsz_loc(1))
-wk1_2d(i,k) = in_c_2d(i,k)
-end do
-call c2c_1m_x(wk1_2d,1,sp)
+wk1%cvar2d = in_c%cvar2d
+call c2c_1m_x(wk1%cvar2d,1,sp)
 else
-call alloc_x(wk1, opt_decomp=sp)
-do concurrent (k=1:sp%xsz(3), j=1:sp%xsz(2), i=1:sp%xsz(1))
-wk1(i,j,k) = in_c(i,j,k)
-end do
-call c2c_1m_x(wk1,1,sp)
+wk1%cvar = in_c%cvar
+call c2c_1m_x(wk1%cvar,1,sp)
 endif
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 #ifdef OVERWRITE
-call transpose_x_to_y(in_c,wk2_r2c,sp,in_c_win,wk2_r2c_win)
+call transpose_x_to_y(in_c,wk2_r2c)
 #else
-call transpose_x_to_y(wk1,wk2_r2c,sp,wk1_win,wk2_r2c_win)
+call transpose_x_to_y(wk1,wk2_r2c)
 #endif
 if (d2d_intranode) then
-call c2c_1m_y(wk2_r2c_2d,1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
 else
-call c2c_1m_y(wk2_r2c,1,sp)
+call c2c_1m_y(wk2_r2c%cvar,1,sp)
 endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
-call transpose_y_to_z(wk2_r2c,wk13,sp,wk2_r2c_win,wk13_win)
+call transpose_y_to_z(wk2_r2c,wk13)
 if (d2d_intranode) then
-call c2r_1m_z(wk13_2d,out_r_2d)
+call c2r_1m_z(wk13%cvar2d,out_r%var2d)
 else
-call c2r_1m_z(wk13,out_r)
+call c2r_1m_z(wk13%cvar,out_r%var)
 endif
 
 endif
 
 #ifndef OVERWRITE
 ! Free memory
-if (associated(wk1)) nullify(wk1)
-if (associated(wk1_2d)) nullify(wk1_2d)
-if (d2d_intranode) call decomp_2d_win_free(wk1_win)
+call wk1%fin
 #endif
 
 return

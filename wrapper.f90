@@ -106,9 +106,10 @@ contains
       ! Local variable
       integer :: ierror
 
+      if (.not.d2d_intranode) return
+
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not.d2d_intranode) call decomp_2d_abort(-1,"Error")
       if (win == MPI_WIN_NULL) call decomp_2d_abort(-1,"Error")
 #endif
 

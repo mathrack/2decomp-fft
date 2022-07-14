@@ -180,66 +180,6 @@
 
   end subroutine transpose_y_to_x_data
 
-  subroutine transpose_y_to_x_real(src, dst, opt_decomp, src_win, dst_win)
-
-    implicit none
-
-    ! Arguments
-    real(mytype), dimension(:,:,:), pointer, intent(IN) :: src
-    real(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
-    TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
-    integer, intent(in), optional :: src_win, dst_win
-
-    ! Local variables
-    type(decomp_data) :: data_src, data_dst
-
-    ! Init using given array
-    call data_src%init(is_cplx = .false., idir = 2, decomp = opt_decomp, rwk = src)
-    call data_dst%init(is_cplx = .false., idir = 1, decomp = opt_decomp, rwk = dst)
-    if (present(src_win)) data_src%win = src_win
-    if (present(dst_win)) data_dst%win = dst_win
-    ! Transpose
-    call transpose_y_to_x(data_src, data_dst)
-    ! Clean
-    nullify(data_src%decomp)
-    nullify(data_src%var)
-    nullify(data_dst%decomp)
-    nullify(data_dst%var)
-    data_src%win = MPI_WIN_NULL
-    data_dst%win = MPI_WIN_NULL
-
-  end subroutine transpose_y_to_x_real
-
-  subroutine transpose_y_to_x_complex(src, dst, opt_decomp, src_win, dst_win)
-
-    implicit none
- 
-    ! Arguments
-    complex(mytype), dimension(:,:,:), pointer, intent(IN) :: src
-    complex(mytype), dimension(:,:,:), pointer, intent(OUT) :: dst
-    TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
-    integer, intent(in), optional :: src_win, dst_win
-
-    ! Local variables
-    type(decomp_data) :: data_src, data_dst
-
-    ! Init using given array
-    call data_src%init(is_cplx = .true., idir = 2, decomp = opt_decomp, cwk = src)
-    call data_dst%init(is_cplx = .true., idir = 1, decomp = opt_decomp, cwk = dst)
-    if (present(src_win)) data_src%win = src_win
-    if (present(dst_win)) data_dst%win = dst_win
-    ! Transpose
-    call transpose_y_to_x(data_src, data_dst)
-    ! Clean
-    nullify(data_src%decomp)
-    nullify(data_src%cvar)
-    nullify(data_dst%decomp)
-    nullify(data_dst%cvar)
-    data_src%win = MPI_WIN_NULL
-    data_dst%win = MPI_WIN_NULL
-
-  end subroutine transpose_y_to_x_complex
-
   subroutine mem_split_yx_real(in,n1,n2,n3,out,iproc,dist,decomp)
 
     implicit none
@@ -276,7 +216,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(in%var2d)) then
+       if (d2d_intranode) then
           do k = 1, decomp%ysz_loc(3)
              do j = i1, i2
                 out(decomp%intramap_split(2,j,k)) = in%var2d(j,k)
@@ -334,7 +274,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(in%cvar2d)) then
+       if (d2d_intranode) then
           do k = 1, decomp%ysz_loc(3)
              do j = i1, i2
                 out(decomp%intramap_split(2,j,k)) = in%cvar2d(j,k)
@@ -392,7 +332,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(i1,1,1), n1, in(pos), i2-i1+1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(out%var2d)) then
+       if (d2d_intranode) then
           do k = 1, decomp%xsz_loc(3)
              do i = i1, i2
                 out%var2d(i,k) = in(decomp%intramap_merge(2,i,k))
@@ -450,7 +390,7 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(i1,1,1), n1, in(pos), i2-i1+1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode .and. associated(out%cvar2d)) then
+       if (d2d_intranode) then
           do k = 1, decomp%xsz_loc(3)
              do i = i1, i2
                 out%cvar2d(i,k) = in(decomp%intramap_merge(2,i,k))
