@@ -44,8 +44,6 @@ else ifeq ($(CMP),gcc)
     FFLAGS += -ffpe-trap=invalid,zero -fcheck=all -fimplicit-none
   else
     FFLAGS += -O3 -march=native
-    FFLAGS += -fopenmp -ftree-parallelize-loops=12
-    LFLAGS += -fopenmp
   endif
 else ifeq ($(CMP),nagfor)
   FC = mpinagfor

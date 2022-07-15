@@ -1,0 +1,11 @@
+nosplit
+nosplit_fft_physical_in_x
+nosplit_fft_physical_in_z
+nosplit_transpose
+run_nosplit
+run_split
+split
+split_fft_physical_in_x
+split_fft_physical_in_z
+split_transpose
+decomp_2d_setup_*.log
