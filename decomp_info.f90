@@ -522,8 +522,8 @@ contains
       ! 2 = transpose_y_to_x
       ! 3 = transpose_y_to_z
       ! 4 = transpose_z_to_y
-      allocate (decomp%intramap_split(4, maxlen, maxloclen))
-      allocate (decomp%intramap_merge(4, maxlen, maxloclen))
+      allocate (decomp%intramap_split(maxlen, maxloclen, 4))
+      allocate (decomp%intramap_merge(maxlen, maxloclen, 4))
       decomp%intramap_split = 0
       decomp%intramap_merge = 0
 
@@ -571,7 +571,7 @@ contains
          end if
          do k = 1, decomp%xsz_loc(3)
             do i = i1, i2
-               decomp%intramap_split(1, i, k) = int(datx%var2d(i, k))
+               decomp%intramap_split(i, k, 1) = int(datx%var2d(i, k))
             end do
          end do
       end do
@@ -613,7 +613,7 @@ contains
          end if
          do k = 1, decomp%ysz_loc(3)
             do j = i1, i2
-               decomp%intramap_merge(1, j, k) = int(daty%var2d(j, k))
+               decomp%intramap_merge(j, k, 1) = int(daty%var2d(j, k))
             end do
          end do
       end do
@@ -658,7 +658,7 @@ contains
          endif
          do k = 1, decomp%ysz_loc(3)
             do j = i1, i2
-               decomp%intramap_split(2,j,k) = int(daty%var2d(j,k))
+               decomp%intramap_split(j, k, 2) = int(daty%var2d(j,k))
             enddo
          enddo
       enddo
@@ -700,7 +700,7 @@ contains
          endif
          do k = 1, decomp%xsz_loc(3)
             do i = i1, i2
-               decomp%intramap_merge(2,i,k) = int(datx%var2d(i,k))
+               decomp%intramap_merge(i, k, 2) = int(datx%var2d(i,k))
             enddo
          enddo
       enddo
@@ -745,7 +745,7 @@ contains
          endif
          do k = 1, decomp%ysz_loc(3)
             do j = i1, i2
-               decomp%intramap_split(3,j,k) = int(daty%var2d(j,k))
+               decomp%intramap_split(j, k, 3) = int(daty%var2d(j,k))
             enddo
          enddo
       enddo
@@ -787,7 +787,7 @@ contains
          endif
          do j = 1, decomp%zsz_loc(3)
             do k = i1, i2
-               decomp%intramap_merge(3,k,j) = int(datz%var2d(k,j))
+               decomp%intramap_merge(k, j, 3) = int(datz%var2d(k,j))
             enddo
          enddo
       enddo
@@ -832,7 +832,7 @@ contains
          endif
          do j = 1, decomp%zsz_loc(3)
             do k = i1, i2
-               decomp%intramap_split(4,k,j) = int(datz%var2d(k,j))
+               decomp%intramap_split(k, j, 4) = int(datz%var2d(k,j))
             enddo
          enddo
       enddo
@@ -874,7 +874,7 @@ contains
          endif
          do k = 1, decomp%ysz_loc(3)
             do j =i1, i2
-               decomp%intramap_merge(4,j,k) = int(daty%var2d(j,k))
+               decomp%intramap_merge(j, k, 4) = int(daty%var2d(j,k))
             enddo
          enddo
       enddo

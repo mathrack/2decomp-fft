@@ -205,7 +205,7 @@
        if (d2d_intranode) then
           do j = 1, decomp%zsz_loc(3)
              do k = i1, i2
-                out(decomp%intramap_split(4,k,j)) = in%var2d(k,j)
+                out(decomp%intramap_split(k,j,4)) = in%var2d(k,j)
              enddo
           enddo
        else
@@ -253,7 +253,7 @@
        if (d2d_intranode) then
           do j = 1, decomp%zsz_loc(3)
              do k = i1, i2
-                out(decomp%intramap_split(4,k,j)) = in%cvar2d(k,j)
+                out(decomp%intramap_split(k,j,4)) = in%cvar2d(k,j)
              enddo
           enddo
        else
@@ -310,7 +310,7 @@
        if (d2d_intranode) then
           do k = 1, decomp%ysz_loc(3)
              do j = i1, i2
-                out%var2d(j,k) = in(decomp%intramap_merge(4,j,k))
+                out%var2d(j,k) = in(decomp%intramap_merge(j,k,4))
              enddo
           enddo
        else
@@ -369,7 +369,7 @@
        if (d2d_intranode) then
           do k = 1, decomp%ysz_loc(3)
              do j = i1, i2
-                out%cvar2d(j,k) = in(decomp%intramap_merge(4,j,k))
+                out%cvar2d(j,k) = in(decomp%intramap_merge(j,k,4))
              enddo
           enddo
        else
