@@ -37,20 +37,11 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
 
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
-if (d2d_intranode) then
 call c2c_1m_x(in%cvar2d,isign,ph)
-else
-call c2c_1m_x(in%cvar,isign,ph)
-endif
 #else
 call wk1%init(is_cplx=.true., idir=1, decomp=ph)
-if (d2d_intranode) then
 wk1%cvar2d = in%cvar2d
 call c2c_1m_x(wk1%cvar2d,isign,ph)
-else
-wk1%cvar = in%cvar
-call c2c_1m_x(wk1%cvar,isign,ph)
-endif
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
@@ -60,19 +51,11 @@ call transpose_x_to_y(in,wk2_c2c)
 #else
 call transpose_x_to_y(wk1,wk2_c2c)
 #endif
-if (d2d_intranode) then
 call c2c_1m_y(wk2_c2c%cvar2d,isign,ph)
-else
-call c2c_1m_y(wk2_c2c%cvar,isign,ph)
-endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
 call transpose_y_to_z(wk2_c2c,out)
-if (d2d_intranode) then
 call c2c_1m_z(out%cvar2d,isign,ph)
-else
-call c2c_1m_z(out%cvar,isign,ph)
-endif
 
 else if (format==PHYSICAL_IN_X .AND. isign==DECOMP_2D_FFT_BACKWARD &
 .OR. & 
@@ -80,20 +63,11 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_FORWARD) then
 
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
-if (d2d_intranode) then
 call c2c_1m_z(in%cvar2d,isign,ph)
-else
-call c2c_1m_z(in%cvar,isign,ph)
-endif
 #else
 call wk1%init(is_cplx=.true., idir=3, decomp=ph)
-if (d2d_intranode) then
 wk1%cvar2d = in%cvar2d
 call c2c_1m_z(wk1%cvar2d,isign,ph)
-else
-wk1%cvar = in%cvar
-call c2c_1m_z(wk1%cvar,isign,ph)
-endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
@@ -102,19 +76,11 @@ call transpose_z_to_y(in,wk2_c2c)
 #else
 call transpose_z_to_y(wk1,wk2_c2c)
 #endif
-if (d2d_intranode) then
 call c2c_1m_y(wk2_c2c%cvar2d,isign,ph)
-else
-call c2c_1m_y(wk2_c2c%cvar,isign,ph)
-endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
 call transpose_y_to_x(wk2_c2c,out)
-if (d2d_intranode) then
 call c2c_1m_x(out%cvar2d,isign,ph)
-else
-call c2c_1m_x(out%cvar,isign,ph)
-endif
 
 end if
 
@@ -155,52 +121,28 @@ type(decomp_data), intent(INOUT) :: out_c
 if (format==PHYSICAL_IN_X) then
 
 ! ===== 1D FFTs in X =====
-if (d2d_intranode) then
 call r2c_1m_x(in_r%var2d,wk13%cvar2d)
-else
-call r2c_1m_x(in_r%var,wk13%cvar)
-endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 call transpose_x_to_y(wk13,wk2_r2c)
-if (d2d_intranode) then
 call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
-else
-call c2c_1m_y(wk2_r2c%cvar,-1,sp)
-endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
 call transpose_y_to_z(wk2_r2c,out_c)
-if (d2d_intranode) then
 call c2c_1m_z(out_c%cvar2d,-1,sp)
-else
-call c2c_1m_z(out_c%cvar,-1,sp)
-endif
 
 else if (format==PHYSICAL_IN_Z) then
 
 ! ===== 1D FFTs in Z =====
-if (d2d_intranode) then
 call r2c_1m_z(in_r%var2d,wk13%cvar2d)
-else
-call r2c_1m_z(in_r%var,wk13%cvar)
-endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 call transpose_z_to_y(wk13,wk2_r2c)
-if (d2d_intranode) then
 call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
-else
-call c2c_1m_y(wk2_r2c%cvar,-1,sp)
-endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
 call transpose_y_to_x(wk2_r2c,out_c)
-if (d2d_intranode) then
 call c2c_1m_x(out_c%cvar2d,-1,sp)
-else
-call c2c_1m_x(out_c%cvar,-1,sp)
-endif
 
 endif
 
@@ -227,20 +169,11 @@ if (format==PHYSICAL_IN_X) then
 
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
-if (d2d_intranode) then
 call c2c_1m_z(in_c%cvar2d,1,sp)
-else
-call c2c_1m_z(in_c%cvar,1,sp)
-endif
 #else
 call wk1%init(is_cplx=.true., idir=1, decomp=sp)
-if (d2d_intranode) then
 wk1%cvar2d = in_c%cvar2d
 call c2c_1m_z(wk1%cvar2d,1,sp)
-else
-wk1%cvar = in_c%cvar
-call c2c_1m_z(wk1%cvar,1,sp)
-endif
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
@@ -249,38 +182,21 @@ call transpose_z_to_y(in_c,wk2_r2c)
 #else
 call transpose_z_to_y(wk1,wk2_r2c)
 #endif
-if (d2d_intranode) then
 call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
-else
-call c2c_1m_y(wk2_r2c%cvar,1,sp)
-endif
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
 call transpose_y_to_x(wk2_r2c,wk13)
-if (d2d_intranode) then
 call c2r_1m_x(wk13%cvar2d,out_r%var2d)
-else
-call c2r_1m_x(wk13%cvar,out_r%var)
-endif
 
 else if (format==PHYSICAL_IN_Z) then
 
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
-if (d2d_intranode) then
 call c2c_1m_x(in_c%cvar2d,1,sp)
-else
-call c2c_1m_x(in_c%cvar,1,sp)
-endif
 #else
 call wk1%init(is_cplx=.true., idir=1, decomp=sp)
-if (d2d_intranode) then
 wk1%cvar2d = in_c%cvar2d
 call c2c_1m_x(wk1%cvar2d,1,sp)
-else
-wk1%cvar = in_c%cvar
-call c2c_1m_x(wk1%cvar,1,sp)
-endif
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
@@ -289,19 +205,11 @@ call transpose_x_to_y(in_c,wk2_r2c)
 #else
 call transpose_x_to_y(wk1,wk2_r2c)
 #endif
-if (d2d_intranode) then
 call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
-else
-call c2c_1m_y(wk2_r2c%cvar,1,sp)
-endif
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
 call transpose_y_to_z(wk2_r2c,wk13)
-if (d2d_intranode) then
 call c2r_1m_z(wk13%cvar2d,out_r%var2d)
-else
-call c2r_1m_z(wk13%cvar,out_r%var)
-endif
 
 endif
 
