@@ -440,7 +440,7 @@ module decomp_2d
      end subroutine decomp_2d_win_fence
 
      module subroutine decomp_2d_win_free(win)    
-        integer, intent(in) :: win
+        integer, intent(inout) :: win
      end subroutine decomp_2d_win_free
 
   end interface

@@ -130,7 +130,7 @@ contains
       implicit none
 
       ! Argument
-      integer, intent(in) :: win
+      integer, intent(inout) :: win
 
       ! Local variable
       integer :: ierror
