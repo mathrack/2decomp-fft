@@ -39,7 +39,7 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_BACKWARD) then
 #ifdef OVERWRITE
 call c2c_1m_x(in%cvar2d,isign,ph)
 #else
-call wk1%init(is_cplx=.true., idir=1, decomp=ph)
+call wk1%copy(in)
 wk1%cvar2d = in%cvar2d
 call c2c_1m_x(wk1%cvar2d,isign,ph)
 #endif
@@ -65,7 +65,7 @@ format==PHYSICAL_IN_Z .AND. isign==DECOMP_2D_FFT_FORWARD) then
 #ifdef OVERWRITE
 call c2c_1m_z(in%cvar2d,isign,ph)
 #else
-call wk1%init(is_cplx=.true., idir=3, decomp=ph)
+call wk1%copy(in)
 wk1%cvar2d = in%cvar2d
 call c2c_1m_z(wk1%cvar2d,isign,ph)
 #endif
@@ -171,7 +171,7 @@ if (format==PHYSICAL_IN_X) then
 #ifdef OVERWRITE
 call c2c_1m_z(in_c%cvar2d,1,sp)
 #else
-call wk1%init(is_cplx=.true., idir=1, decomp=sp)
+call wk1%copy(in_c)
 wk1%cvar2d = in_c%cvar2d
 call c2c_1m_z(wk1%cvar2d,1,sp)
 #endif
