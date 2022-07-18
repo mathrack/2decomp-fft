@@ -122,9 +122,9 @@ contains
       integer, intent(out) :: win
 
       ! Local variables
-      integer :: status, errorcode, ierror
+      integer :: status, errorcode, ierror, tmpdispunit
       type(c_ptr) :: baseptr
-      integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpdispunit
+      integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
 
       if (d2d_intranode) then
          ! Allocate shared memory on local master
@@ -142,8 +142,9 @@ contains
                                       ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_ALLOCATE_SHARED")
          ! Get the memory on local master
-         call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, baseptr, ierror)
+         call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
+         baseptr = transfer(tmpptr, baseptr)
          call C_F_POINTER(baseptr, array, (/buf_size/))
       else
          ! Allocate memory
@@ -166,9 +167,9 @@ contains
       integer, intent(out) :: win
 
       ! Local variables
-      integer :: status, errorcode, ierror
+      integer :: status, errorcode, ierror, tmpdispunit
       type(c_ptr) :: baseptr
-      integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpdispunit
+      integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
 
       if (d2d_intranode) then
          ! Allocate shared memory on local master
@@ -186,8 +187,9 @@ contains
                                       ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_ALLOCATE_SHARED")
          ! Get the memory on local master
-         call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, baseptr, ierror)
+         call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
+         baseptr = transfer(tmpptr, baseptr)
          call C_F_POINTER(baseptr, array, (/buf_size/))
       else
          ! Allocate memory

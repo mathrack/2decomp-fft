@@ -148,8 +148,8 @@ submodule (decomp_2d) smod_alloc
 
     ! Local variables
     type(c_ptr) :: baseptr
-    integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpdispunit
-    integer :: info, ierror
+    integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
+    integer :: tmpdispunit, info, ierror
 
     ! Size of the memory to allocate on each CPU
     winsize = nloc1 * nloc2 * nloc3
@@ -176,9 +176,10 @@ submodule (decomp_2d) smod_alloc
     call C_F_POINTER(baseptr, var2d, (/nloc1, nloc2 * nloc3/))
 
     ! Get the node-level 3D memory
-    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, baseptr, ierror)
+    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
     if (associated(var)) nullify(var)
+    baseptr = transfer(tmpptr, baseptr)
     call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
 
     call MPI_INFO_FREE(info, ierror)
@@ -201,8 +202,8 @@ submodule (decomp_2d) smod_alloc
 
     ! Local variables
     type(c_ptr) :: baseptr
-    integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpdispunit
-    integer :: info, ierror
+    integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
+    integer :: tmpdispunit, info, ierror
 
     ! Size of the memory to allocate on each CPU
     winsize = nloc1 * nloc2 * nloc3
@@ -229,9 +230,10 @@ submodule (decomp_2d) smod_alloc
     call C_F_POINTER(baseptr, var2d, (/nloc1, nloc2 * nloc3/))
                                     
     ! Get the node-level 3D memory  
-    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, baseptr, ierror)
+    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
     if (associated(var)) nullify(var)
+    baseptr = transfer(tmpptr, baseptr)
     call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
 
     call MPI_INFO_FREE(info, ierror)
