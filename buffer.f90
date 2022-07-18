@@ -112,7 +112,7 @@ contains
    !
    ! Internal routine to allocate memory
    !
-   module subroutine smod_real_array_alloc(array, buf_size, win)
+   subroutine smod_real_array_alloc(array, buf_size, win)
 
       implicit none
 
@@ -156,7 +156,7 @@ contains
       end if
 
    end subroutine smod_real_array_alloc
-   module subroutine smod_cplx_array_alloc(array, buf_size, win)
+   subroutine smod_cplx_array_alloc(array, buf_size, win)
 
       implicit none
 
@@ -204,7 +204,7 @@ contains
    !
    ! Internal routine to free the buffers
    !
-   module subroutine smod_buffer_free
+   subroutine smod_buffer_free
 
       implicit none
 
