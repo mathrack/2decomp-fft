@@ -122,11 +122,17 @@ contains
       integer, intent(out) :: win
 
       ! Local variables
-      integer :: status, errorcode, ierror, tmpdispunit
+      integer :: status, errorcode, ierror, tmpdispunit, info
       type(c_ptr) :: baseptr
       integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
 
       if (d2d_intranode) then
+         ! Same disp_unit everywhere
+         call MPI_INFO_CREATE(info, ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
+         call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+
          ! Allocate shared memory on local master
          if (nrank_loc == 0) then
             winsize = buf_size
@@ -135,17 +141,23 @@ contains
          end if
          call MPI_WIN_ALLOCATE_SHARED(winsize*mytype_bytes, &
                                       mytype_bytes, &
-                                      MPI_INFO_NULL, &
+                                      info, &
                                       DECOMP_2D_LOCALCOMM, &
                                       baseptr, &
                                       win, &
                                       ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_ALLOCATE_SHARED")
+
          ! Get the memory on local master
          call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
          baseptr = transfer(tmpptr, baseptr)
          call C_F_POINTER(baseptr, array, (/buf_size/))
+
+         ! info is no longer needed
+         call MPI_INFO_FREE(info, ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_FREE")
+
       else
          ! Allocate memory
          allocate (array(buf_size), STAT=status)
@@ -167,11 +179,17 @@ contains
       integer, intent(out) :: win
 
       ! Local variables
-      integer :: status, errorcode, ierror, tmpdispunit
+      integer :: status, errorcode, ierror, tmpdispunit, info
       type(c_ptr) :: baseptr
       integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
 
       if (d2d_intranode) then
+         ! Same disp_unit everywhere
+         call MPI_INFO_CREATE(info, ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
+         call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+
          ! Allocate shared memory on local master
          if (nrank_loc == 0) then
             winsize = buf_size
@@ -180,17 +198,23 @@ contains
          end if
          call MPI_WIN_ALLOCATE_SHARED(winsize*mytype_bytes*2, &
                                       mytype_bytes*2, &
-                                      MPI_INFO_NULL, &
+                                      info, &
                                       DECOMP_2D_LOCALCOMM, &
                                       baseptr, &
                                       win, &
                                       ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_ALLOCATE_SHARED")
+
          ! Get the memory on local master
          call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
          baseptr = transfer(tmpptr, baseptr)
          call C_F_POINTER(baseptr, array, (/buf_size/))
+
+         ! info is no longer needed
+         call MPI_INFO_FREE(info, ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_FREE")
+
       else
          ! Allocate memory
          allocate (array(buf_size), STAT=status)
