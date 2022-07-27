@@ -443,6 +443,22 @@ module decomp_2d
         integer, intent(inout) :: win
      end subroutine decomp_2d_win_free
 
+     module subroutine decomp_2d_win_sync(win)                     
+        integer, intent(in) :: win
+     end subroutine decomp_2d_win_sync
+
+     module subroutine decomp_2d_win_lock_all(win) 
+        integer, intent(in) :: win 
+     end subroutine decomp_2d_win_lock_all
+
+     module subroutine decomp_2d_win_unlock_all(win)
+        integer, intent(in) :: win
+     end subroutine decomp_2d_win_unlock_all
+
+     module subroutine decomp_2d_barrier(comm)
+        integer, intent(in) :: comm
+     end subroutine decomp_2d_barrier
+
   end interface
 
 contains
