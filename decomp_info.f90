@@ -528,9 +528,9 @@ contains
       decomp%intramap_merge = 0
 
       ! Init node-level arrays
-      call datx%init(is_cplx=.false., idir=1, decomp=decomp)
-      call daty%init(is_cplx=.false., idir=2, decomp=decomp)
-      call datz%init(is_cplx=.false., idir=3, decomp=decomp)
+      call datx%init(is_cplx=.false., idir=1, decomp=decomp, contig=.true.)
+      call daty%init(is_cplx=.false., idir=2, decomp=decomp, contig=.true.)
+      call datz%init(is_cplx=.false., idir=3, decomp=decomp, contig=.true.)
 
       ! transpose_x_to_y
       iproc = dims(1)

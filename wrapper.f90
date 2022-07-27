@@ -56,7 +56,7 @@ contains
       else
          ! Advanced sync. using mpi_win_sync
          call decomp_2d_win_sync(src_win)
-         call decomp_2d_barrier(DECOMP_2D_LOCALCOMM)
+         !call decomp_2d_barrier(DECOMP_2D_LOCALCOMM)
          call decomp_2d_win_unlock_all(src_win)
       end if
 

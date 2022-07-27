@@ -21,7 +21,7 @@ contains
    !
    ! Initialize the object and allocate memory
    !
-   module subroutine decomp_data_init(self, is_cplx, idir, decomp, rwk, cwk)
+   module subroutine decomp_data_init(self, is_cplx, idir, decomp, rwk, cwk, contig)
 
       implicit none
 
@@ -32,6 +32,7 @@ contains
       type(decomp_info), intent(in), target, optional :: decomp
       real(mytype), dimension(:, :, :), target, optional :: rwk
       complex(mytype), dimension(:, :, :), target, optional :: cwk
+      logical, optional :: contig
 
       ! Local variables
       logical, parameter :: glob = .false.
@@ -57,6 +58,11 @@ contains
       end if
       self%idir = idir
       self%shm = d2d_intranode
+      if (present(contig)) then
+         self%contig = contig
+      else
+         self%contig = .false.
+      endif
 
       ! Specific case : a 3D array was provided, no alloc needed
       if (present(rwk) .or. present(cwk)) then
@@ -72,9 +78,9 @@ contains
          if (self%shm) then
             ! MPI3 unified memory
             if (self%is_cplx) then
-               call alloc_x(self%cvar, self%cvar2d, self%decomp, glob, self%win)
+               call alloc_x(self%cvar, self%cvar2d, self%decomp, glob, self%win, self%contig)
             else
-               call alloc_x(self%var, self%var2d, self%decomp, glob, self%win)
+               call alloc_x(self%var, self%var2d, self%decomp, glob, self%win, self%contig)
             end if
          else
             ! Regular local object
@@ -89,9 +95,9 @@ contains
          if (self%shm) then
             ! MPI3 unified memory
             if (self%is_cplx) then
-               call alloc_y(self%cvar, self%cvar2d, self%decomp, glob, self%win)
+               call alloc_y(self%cvar, self%cvar2d, self%decomp, glob, self%win, self%contig)
             else
-               call alloc_y(self%var, self%var2d, self%decomp, glob, self%win)
+               call alloc_y(self%var, self%var2d, self%decomp, glob, self%win, self%contig)
             end if
          else
             ! Regular local object
@@ -106,9 +112,9 @@ contains
          if (self%shm) then
             ! MPI3 unified memory
             if (self%is_cplx) then
-               call alloc_z(self%cvar, self%cvar2d, self%decomp, glob, self%win)
+               call alloc_z(self%cvar, self%cvar2d, self%decomp, glob, self%win, self%contig)
             else
-               call alloc_z(self%var, self%var2d, self%decomp, glob, self%win)
+               call alloc_z(self%var, self%var2d, self%decomp, glob, self%win, self%contig)
             end if
          else
             ! Regular local object
@@ -137,7 +143,8 @@ contains
 
       call self%init(is_cplx = dat%is_cplx, &
                      idir = dat%idir, &
-                     decomp = dat%decomp)
+                     decomp = dat%decomp, &
+                     contig = dat%contig)
 
    end subroutine decomp_data_init_copy
 
@@ -156,9 +163,9 @@ contains
       if (self%shm) then
          call decomp_2d_win_free(self%win)
          if (self%is_cplx) then
-            nullify (self%cvar)
+            if (associated(self%cvar)) nullify (self%cvar)
          else
-            nullify (self%var)
+            if (associated(self%var)) nullify (self%var)
          end if
       else
          if (self%is_cplx) then

@@ -132,6 +132,8 @@ contains
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
          call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+         call MPI_INFO_SET(info, "alloc_shared_noncontig", "true", ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
 
          ! Allocate shared memory on local master
          if (nrank_loc == 0) then
@@ -188,6 +190,8 @@ contains
          call MPI_INFO_CREATE(info, ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
          call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
+         if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+         call MPI_INFO_SET(info, "alloc_shared_noncontig", "true", ierror)
          if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
 
          ! Allocate shared memory on local master

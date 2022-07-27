@@ -98,27 +98,27 @@ program xcompact3d
    call init_xcompact3d(hostcomm, localcomm)
 
    call ux1%init(is_cplx=.false., idir=1)
-   call ref1%copy(ux1)
+   call ref1%init(is_cplx=.false., idir=1, contig=.true.)
    call t1%copy(ux1)
 
    call ux2%init(is_cplx=.false., idir=2)
-   call ref2%copy(ux2)
+   call ref2%init(is_cplx=.false., idir=2, contig=.true.)
    call t2%copy(ux2)
 
    call ux3%init(is_cplx=.false., idir=3)
-   call ref3%copy(ux3)
+   call ref3%init(is_cplx=.false., idir=3, contig=.true.)
    call t3%copy(ux3)
 
    call cux1%init(is_cplx=.true., idir=1)
-   call cref1%copy(cux1)
+   call cref1%init(is_cplx=.true., idir=1, contig=.true.)
    call ct1%copy(cux1)
 
    call cux2%init(is_cplx=.true., idir=2)
-   call cref2%copy(cux2)
+   call cref2%init(is_cplx=.true., idir=2, contig=.true.)
    call ct2%copy(cux2)
 
    call cux3%init(is_cplx=.true., idir=3)
-   call cref3%copy(cux3)
+   call cref3%init(is_cplx=.true., idir=3, contig=.true.)
    call ct3%copy(cux3)
 
    call decomp_2d_win_fence(ref1%win)
@@ -197,7 +197,6 @@ program xcompact3d
 
    ! Test x => y
    call transpose_x_to_y(cref1, cux2)
-   ct2%cvar2d = cref2%cvar2d - cux2%cvar2d
    print *, "x =c=> y ?", maxval(abs(real(ct2%cvar2d))), maxval(abs(aimag(ct2%cvar2d)))
 
    ! Test y => x

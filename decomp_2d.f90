@@ -98,6 +98,7 @@ module decomp_2d
      complex(mytype), dimension(:,:), pointer :: cvar2d => null()
      ! Associated window if MPI3 shared memory
      logical :: shm = .false.
+     logical :: contig = .false.
      integer :: win = MPI_WIN_NULL
      contains
         procedure :: init => decomp_data_init
@@ -239,19 +240,21 @@ module decomp_2d
   ! Submodule alloc
 
   interface
-     module subroutine alloc_x_real(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_x_real(var, var2d, opt_decomp, opt_global, win, contig)
         real(mytype), dimension(:,:,:), pointer :: var
         real(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_x_real
-     module subroutine alloc_x_complex(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_x_complex(var, var2d, opt_decomp, opt_global, win, contig)
         complex(mytype), dimension(:,:,:), pointer :: var
         complex(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_x_complex
   end interface
   interface alloc_x
@@ -259,19 +262,21 @@ module decomp_2d
   end interface alloc_x
 
   interface
-     module subroutine alloc_y_real(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_y_real(var, var2d, opt_decomp, opt_global, win, contig)
         real(mytype), dimension(:,:,:), pointer :: var
         real(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_y_real
-     module subroutine alloc_y_complex(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_y_complex(var, var2d, opt_decomp, opt_global, win, contig)
         complex(mytype), dimension(:,:,:), pointer :: var
         complex(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_y_complex
   end interface
   interface alloc_y
@@ -279,19 +284,21 @@ module decomp_2d
   end interface alloc_y
 
   interface
-     module subroutine alloc_z_real(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_z_real(var, var2d, opt_decomp, opt_global, win, contig)
         real(mytype), dimension(:,:,:), pointer :: var
         real(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_z_real
-     module subroutine alloc_z_complex(var, var2d, opt_decomp, opt_global, win)
+     module subroutine alloc_z_complex(var, var2d, opt_decomp, opt_global, win, contig)
         complex(mytype), dimension(:,:,:), pointer :: var 
         complex(mytype), dimension(:,:), pointer, optional :: var2d
         TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
         logical, intent(IN), optional :: opt_global
         integer, intent(out), optional :: win
+        logical, optional :: contig
      end subroutine alloc_z_complex
   end interface
   interface alloc_z
@@ -359,13 +366,14 @@ module decomp_2d
 
      ! Submodule decomp_data
 
-     module subroutine decomp_data_init(self, is_cplx, idir, decomp, rwk, cwk)
+     module subroutine decomp_data_init(self, is_cplx, idir, decomp, rwk, cwk, contig)
         class(decomp_data), intent(out) :: self
         logical, intent(in) :: is_cplx
         integer, intent(in) :: idir
         type(decomp_info), intent(in), target, optional :: decomp
         real(mytype), dimension(:,:,:), target, optional :: rwk
         complex(mytype), dimension(:,:,:), target, optional :: cwk
+        logical, optional :: contig
      end subroutine decomp_data_init
 
      module subroutine decomp_data_init_copy(self, dat)

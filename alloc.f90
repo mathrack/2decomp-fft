@@ -136,7 +136,9 @@ submodule (decomp_2d) smod_alloc
   !
   ! Generic subroutine to allocate a MPI3 unified memory real array
   !
-  subroutine alloc_mpi3_real(var, n1, n2, n3, var2d, nloc1, nloc2, nloc3, win)
+  subroutine alloc_mpi3_real(var, n1, n2, n3, &
+                             var2d, nloc1, nloc2, nloc3, &
+                             win, contig)
 
     implicit none
 
@@ -145,11 +147,15 @@ submodule (decomp_2d) smod_alloc
     integer, intent(in) :: n1, n2, n3, nloc1, nloc2, nloc3
     real(mytype), dimension(:,:,:), pointer :: var
     real(mytype), dimension(:,:), pointer :: var2d
+    logical, optional :: contig
 
     ! Local variables
     type(c_ptr) :: baseptr
     integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
     integer :: tmpdispunit, info, ierror
+
+    ! Default : non-contiguous
+    if (.not.present(contig)) contig = .false.
 
     ! Size of the memory to allocate on each CPU
     winsize = nloc1 * nloc2 * nloc3
@@ -159,6 +165,10 @@ submodule (decomp_2d) smod_alloc
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
     call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+    if (.not.contig) then
+       call MPI_INFO_SET(info, "alloc_shared_noncontig", "true", ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+    endif
 
     ! Create a window and allow direct memory access inside DECOMP_2D_LOCALCOMM
     win = MPI_WIN_NULL
@@ -175,12 +185,14 @@ submodule (decomp_2d) smod_alloc
     if (associated(var2d)) nullify(var2d)
     call C_F_POINTER(baseptr, var2d, (/nloc1, nloc2 * nloc3/))
 
-    ! Get the node-level 3D memory
-    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
-    if (associated(var)) nullify(var)
-    baseptr = transfer(tmpptr, baseptr)
-    call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
+    ! Get the node-level 3D memory if possible
+    if (contig) then
+       call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
+       if (associated(var)) nullify(var)
+       baseptr = transfer(tmpptr, baseptr)
+       call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
+    endif
 
     call MPI_INFO_FREE(info, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_FREE")
@@ -190,7 +202,9 @@ submodule (decomp_2d) smod_alloc
   !
   ! Generic subroutine to allocate a MPI3 unified memory complex array
   !
-  subroutine alloc_mpi3_cplx(var, n1, n2, n3, var2d, nloc1, nloc2, nloc3, win)
+  subroutine alloc_mpi3_cplx(var, n1, n2, n3, &
+                             var2d, nloc1, nloc2, nloc3, &
+                             win, contig)
 
     implicit none
 
@@ -199,11 +213,15 @@ submodule (decomp_2d) smod_alloc
     integer, intent(in) :: n1, n2, n3, nloc1, nloc2, nloc3
     complex(mytype), dimension(:,:,:), pointer :: var
     complex(mytype), dimension(:,:), pointer :: var2d
+    logical, optional :: contig
 
     ! Local variables
     type(c_ptr) :: baseptr
     integer(kind=MPI_ADDRESS_KIND) :: winsize, tmpsize, tmpptr
     integer :: tmpdispunit, info, ierror
+
+    ! Default : non-contiguous
+    if (.not.present(contig)) contig = .false.
 
     ! Size of the memory to allocate on each CPU
     winsize = nloc1 * nloc2 * nloc3
@@ -213,6 +231,10 @@ submodule (decomp_2d) smod_alloc
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_CREATE")
     call MPI_INFO_SET(info, "same_disp_unit", "true", ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+    if (.not.contig) then
+       call MPI_INFO_SET(info, "alloc_shared_noncontig", "true", ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_SET")
+    endif
 
     ! Create a window and allow direct memory access inside DECOMP_2D_LOCALCOMM
     win = MPI_WIN_NULL
@@ -229,12 +251,14 @@ submodule (decomp_2d) smod_alloc
     if (associated(var2d)) nullify(var2d)
     call C_F_POINTER(baseptr, var2d, (/nloc1, nloc2 * nloc3/))
                                     
-    ! Get the node-level 3D memory  
-    call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
-    if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
-    if (associated(var)) nullify(var)
-    baseptr = transfer(tmpptr, baseptr)
-    call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
+    ! Get the node-level 3D memory if possible
+    if (contig) then
+       call MPI_WIN_SHARED_QUERY(win, 0, tmpsize, tmpdispunit, tmpptr, ierror)
+       if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_WIN_SHARED_QUERY")
+       if (associated(var)) nullify(var)
+       baseptr = transfer(tmpptr, baseptr)
+       call C_F_POINTER(baseptr, var, (/n1, n2, n3/))
+    endif
 
     call MPI_INFO_FREE(info, ierror)
     if (ierror /= 0) call decomp_2d_abort(__FILE__, __LINE__, ierror, "MPI_INFO_FREE")
@@ -242,7 +266,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_mpi3_cplx
 
   ! X-pencil real arrays
-  module subroutine alloc_x_real(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_x_real(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -251,6 +275,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -276,7 +301,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_real(var, decomp%xsz(1), decomp%xsz(2), decomp%xsz(3), &
-                            var2d, decomp%xsz_loc(1), decomp%xsz_loc(2), decomp%xsz_loc(3), win)
+                            var2d, decomp%xsz_loc(1), decomp%xsz_loc(2), decomp%xsz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then
@@ -291,7 +317,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_x_real
 
   ! X-pencil complex arrays
-  module subroutine alloc_x_complex(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_x_complex(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -300,6 +326,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -325,7 +352,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_cplx(var, decomp%xsz(1), decomp%xsz(2), decomp%xsz(3), &
-                            var2d, decomp%xsz_loc(1), decomp%xsz_loc(2), decomp%xsz_loc(3), win)
+                            var2d, decomp%xsz_loc(1), decomp%xsz_loc(2), decomp%xsz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then
@@ -340,7 +368,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_x_complex
 
   ! Y-pencil real arrays
-  module subroutine alloc_y_real(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_y_real(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -349,6 +377,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -374,7 +403,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_real(var, decomp%ysz(1), decomp%ysz(2), decomp%ysz(3), &
-                            var2d, decomp%ysz_loc(1), decomp%ysz_loc(2), decomp%ysz_loc(3), win)
+                            var2d, decomp%ysz_loc(1), decomp%ysz_loc(2), decomp%ysz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then
@@ -389,7 +419,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_y_real
 
   ! Y-pencil complex arrays
-  module subroutine alloc_y_complex(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_y_complex(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -398,6 +428,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -423,7 +454,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_cplx(var, decomp%ysz(1), decomp%ysz(2), decomp%ysz(3), &
-                            var2d, decomp%ysz_loc(1), decomp%ysz_loc(2), decomp%ysz_loc(3), win)
+                            var2d, decomp%ysz_loc(1), decomp%ysz_loc(2), decomp%ysz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then
@@ -438,7 +470,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_y_complex
 
   ! Z-pencil real arrays
-  module subroutine alloc_z_real(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_z_real(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -447,6 +479,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -472,7 +505,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_real(var, decomp%zsz(1), decomp%zsz(2), decomp%zsz(3), &
-                            var2d, decomp%zsz_loc(1), decomp%zsz_loc(2), decomp%zsz_loc(3), win)
+                            var2d, decomp%zsz_loc(1), decomp%zsz_loc(2), decomp%zsz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then
@@ -488,7 +522,7 @@ submodule (decomp_2d) smod_alloc
   end subroutine alloc_z_real
 
   ! Z-pencil complex arrays
-  module subroutine alloc_z_complex(var, var2d, opt_decomp, opt_global, win)
+  module subroutine alloc_z_complex(var, var2d, opt_decomp, opt_global, win, contig)
 
     implicit none
 
@@ -497,6 +531,7 @@ submodule (decomp_2d) smod_alloc
     TYPE(DECOMP_INFO), intent(IN), optional :: opt_decomp
     logical, intent(IN), optional :: opt_global
     integer, intent(out), optional :: win
+    logical, optional :: contig
 
     TYPE(DECOMP_INFO) :: decomp
     logical :: global
@@ -522,7 +557,8 @@ submodule (decomp_2d) smod_alloc
     if (d2d_intranode) then
        ! MPI3 shared memory, the caller should free the MPI window
        call alloc_mpi3_cplx(var, decomp%zsz(1), decomp%zsz(2), decomp%zsz(3), &
-                            var2d, decomp%zsz_loc(1), decomp%zsz_loc(2), decomp%zsz_loc(3), win)
+                            var2d, decomp%zsz_loc(1), decomp%zsz_loc(2), decomp%zsz_loc(3), &
+                            win, contig)
     else
        ! No MPI3 shared memory
        if (global) then

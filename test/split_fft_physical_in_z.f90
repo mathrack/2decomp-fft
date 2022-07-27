@@ -103,21 +103,21 @@ program xcompact3d
    call init_xcompact3d(hostcomm, localcomm)
 
    call ux1%init(is_cplx=.false., idir=1)
-   call ref1%copy(ux1)
+   call ref1%init(is_cplx=.false., idir=1, contig=.true.)
    call t1%copy(ux1)
 
    call ux3%init(is_cplx=.false., idir=3)
-   call ref3%copy(ux3)
+   call ref3%init(is_cplx=.false., idir=3, contig=.true.)
    call t3%copy(ux3)
 
    call wk%init(is_cplx=.true., idir=1, decomp=sp)
 
    call cux1%init(is_cplx=.true., idir=1, decomp=ph)
-   call cref1%copy(cux1)
+   call cref1%init(is_cplx=.true., idir=1, decomp=ph, contig=.true.)
    call ct1%copy(cux1)
 
    call cux3%init(is_cplx=.true., idir=3, decomp=ph)
-   call cref3%copy(cux3)
+   call cref3%init(is_cplx=.true., idir=3, decomp=ph, contig=.true.)
    call ct3%copy(cux3)
 
    call decomp_2d_win_fence(ref1%win)
