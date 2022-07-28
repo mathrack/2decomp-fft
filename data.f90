@@ -158,30 +158,25 @@ contains
       ! Argument
       class(decomp_data), intent(inout) :: self
 
+      self%is_cplx = .true.
+
       if (associated(self%decomp)) nullify(self%decomp)
+      self%idir = 0
 
       if (self%shm) then
          call decomp_2d_win_free(self%win)
-         if (self%is_cplx) then
-            if (associated(self%cvar)) nullify (self%cvar)
-         else
-            if (associated(self%var)) nullify (self%var)
-         end if
+         if (associated(self%cvar)) nullify (self%cvar)
+         if (associated(self%var)) nullify (self%var)
       else
-         if (self%is_cplx) then
-            deallocate (self%cvar)
-         else
-            deallocate (self%var)
-         end if
+         if (associated(self%cvar)) deallocate (self%cvar)
+         if (associated(self%var)) deallocate (self%var)
       end if
 
-      if (self%is_cplx) then
-         nullify (self%cvar2d)
-      else
-         nullify (self%var2d)
-      end if
+      if (associated(self%cvar2d)) nullify (self%cvar2d)
+      if (associated(self%var2d)) nullify (self%var2d)
 
-      self%idir = 0
+      self%shm = .false.
+      self%contig = .false.
 
    end subroutine decomp_data_fin
 

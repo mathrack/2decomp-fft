@@ -177,6 +177,7 @@ contains
 
       call MPI_WIN_FREE(win, ierror)
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_WIN_FREE")
+      win = MPI_WIN_NULL
 
    end subroutine decomp_2d_win_free
 
