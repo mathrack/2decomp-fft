@@ -80,12 +80,12 @@ contains
    !  - multiple global sizes can co-exist in one application, each
    !    using its own DECOMP_INFO object
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   module subroutine decomp_info_init(nx, ny, nz, decomp)
+   module subroutine decomp_info_init(decomp, nx, ny, nz)
 
       implicit none
 
+      class(decomp_info), intent(out) :: decomp
       integer, intent(IN) :: nx, ny, nz
-      TYPE(DECOMP_INFO), intent(INOUT) :: decomp
 
       integer :: buf_size, status, errorcode
 

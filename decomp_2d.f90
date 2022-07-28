@@ -141,6 +141,8 @@ module decomp_2d
      ! node-level map for intra-node split and merge
      integer, allocatable, dimension(:,:,:) :: intramap_split, intramap_merge
 
+     contains
+        procedure :: init => decomp_info_init
   END TYPE DECOMP_INFO
 
   ! main (default) decomposition information for global size nx*ny*nz
@@ -395,9 +397,9 @@ module decomp_2d
         type(decomp_info), intent(out) :: decomp
      end subroutine get_decomp_info
 
-     module subroutine decomp_info_init(nx,ny,nz,decomp)
+     module subroutine decomp_info_init(decomp,nx,ny,nz)
+         class(decomp_info), intent(out) :: decomp
         integer, intent(IN) :: nx,ny,nz
-        type(decomp_info), intent(inout) :: decomp
      end subroutine decomp_info_init
 
      module subroutine decomp_info_init_local(decomp)
@@ -512,7 +514,7 @@ contains
           ! Intra-node CPU map
           call decomp_2d_map_local()
           ! Initialize the main decomp_info object
-          call decomp_info_init(nx, ny, nz, decomp_main)
+          call decomp_main%init(nx, ny, nz)
           ! Receive some decomp_2d stuff from local master
           call decomp_2d_init_local()
           ! Print decomp_2d setup
@@ -613,7 +615,7 @@ contains
     call init_neighbour
 
     ! actually generate all 2D decomposition information
-    call decomp_info_init(nx,ny,nz,decomp_main)
+    call decomp_main%init(nx,ny,nz)
 
     ! make a copy of the decomposition information associated with the
     ! default global size in these global variables so applications can

@@ -27,8 +27,8 @@ logical, save :: initialised = .false.
 integer, save :: nx_fft, ny_fft, nz_fft
 
 ! Decomposition objects
-TYPE(DECOMP_INFO), save, public :: ph  ! physical space
-TYPE(DECOMP_INFO), save, public :: sp  ! spectral space
+TYPE(DECOMP_INFO), save, pointer, public :: ph  ! physical space
+TYPE(DECOMP_INFO), save, pointer, public :: sp  ! spectral space
 
 ! Workspace to store the intermediate Y-pencil data
 ! *** TODO: investigate how to use only one workspace array
@@ -131,11 +131,19 @@ nz_fft = nz
 !         (nx/2+1)*ny*nz, if PHYSICAL_IN_X
 !      or nx*ny*(nz/2+1), if PHYSICAL_IN_Z
 
-call decomp_info_init(nx, ny, nz, ph)
+if (nx_fft == nx_global .and. &
+    ny_fft == ny_global .and. &
+    nz_fft == nz_global) then
+ph => decomp_main
+else
+allocate(ph)
+call ph%init(nx, ny, nz)
+endif
+allocate(sp)
 if (format==PHYSICAL_IN_X) then
-call decomp_info_init(nx/2+1, ny, nz, sp)
+call sp%init(nx/2+1, ny, nz)
 else if (format==PHYSICAL_IN_Z) then
-call decomp_info_init(nx, ny, nz/2+1, sp)
+call sp%init(nx, ny, nz/2+1)
 end if
 
 call wk2_c2c%init(is_cplx=.true., idir=2, decomp=ph)
@@ -163,7 +171,13 @@ implicit none
 
 integer :: ierror
 
+if (nx_fft == nx_global .and. &
+    ny_fft == ny_global .and. &
+    nz_fft == nz_global) then
+nullify(ph)
+else
 call decomp_info_finalize(ph)
+endif
 call decomp_info_finalize(sp)
 
 call wk2_c2c%fin
