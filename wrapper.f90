@@ -29,6 +29,12 @@ contains
 
       integer, intent(in) :: src_win
 
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
+      if (src_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
+#endif
+
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
          call decomp_2d_win_fence(src_win, MPI_MODE_NOPUT + MPI_MODE_NOSTORE)
@@ -49,6 +55,12 @@ contains
       implicit none
 
       integer, intent(in) :: src_win
+
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
+      if (src_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
+#endif
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
@@ -71,6 +83,12 @@ contains
 
       integer, intent(in) :: dst_win
 
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
+      if (dst_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
+#endif
+
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
          call decomp_2d_win_fence(dst_win)
@@ -89,6 +107,12 @@ contains
       implicit none
 
       integer, intent(in) :: dst_win
+
+      ! Safety check only in debug mode
+#ifdef DEBUG
+      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
+      if (dst_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
+#endif
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
@@ -145,11 +169,11 @@ contains
       ! Local variable
       integer :: ierror
 
-      ! Safety check only in debug mode
+      ! Safety check
 #ifdef DEBUG
       if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
-      if (win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
 #endif
+      if (win == MPI_WIN_NULL) return
 
       call MPI_WIN_FREE(win, ierror)
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_WIN_FREE")
@@ -243,7 +267,6 @@ contains
 
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
       if (comm == MPI_COMM_NULL) call decomp_2d_abort(-1, "Error")
 #endif
 
@@ -251,5 +274,28 @@ contains
       if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_BARRIER")
 
    end subroutine decomp_2d_barrier
+
+   !
+   ! Free the given MPI comm if possible
+   !
+   module subroutine decomp_2d_comm_free(comm)
+
+      implicit none
+
+      ! Arugment
+      integer, intent(inout) :: comm
+
+      ! Local variable
+      integer :: ierror
+
+      ! Safety check
+      if (comm == MPI_COMM_WORLD) return
+      if (comm == MPI_COMM_NULL) return
+
+      call MPI_COMM_FREE(comm, ierror)
+      if (ierror /= 0) call decomp_2d_abort(ierror, "MPI_COMM_FREE")
+      comm = MPI_COMM_NULL
+
+   end subroutine decomp_2d_comm_free
 
 end submodule smod_wrapper

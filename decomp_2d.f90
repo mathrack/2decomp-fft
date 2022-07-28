@@ -469,6 +469,10 @@ module decomp_2d
         integer, intent(in) :: comm
      end subroutine decomp_2d_barrier
 
+     module subroutine decomp_2d_comm_free(comm)
+        integer, intent(inout) :: comm
+     end subroutine decomp_2d_comm_free
+
   end interface
 
 contains
@@ -507,6 +511,11 @@ contains
        ! MPI3 shared memory
        d2d_intranode = .true.
        DECOMP_2D_LOCALCOMM = local_comm
+       DECOMP_2D_COMM_ROW = MPI_COMM_NULL
+       DECOMP_2D_COMM_COL = MPI_COMM_NULL
+       DECOMP_2D_COMM_CART_X = MPI_COMM_NULL
+       DECOMP_2D_COMM_CART_Y = MPI_COMM_NULL
+       DECOMP_2D_COMM_CART_Z = MPI_COMM_NULL
        ! Only local masters will perform MPI operations
        if (DECOMP_2D_COMM == MPI_COMM_NULL) then
           nrank = -1
@@ -773,32 +782,18 @@ contains
     
     implicit none
  
-    integer :: ierror
-
     call decomp_buffer_free()
 
-    ! Release localcomm if possible
-    if (DECOMP_2D_LOCALCOMM /= MPI_COMM_NULL .and. DECOMP_2D_LOCALCOMM /= MPI_COMM_WORLD) then       
-       call MPI_COMM_FREE(DECOMP_2D_LOCALCOMM, ierror)                                               
-       if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")          
-    endif 
+    ! Release the communicators if possible
+    call decomp_2d_comm_free(DECOMP_2D_LOCALCOMM)
+    call decomp_2d_comm_free(DECOMP_2D_COMM)
+    call decomp_2d_comm_free(DECOMP_2D_COMM_ROW)
+    call decomp_2d_comm_free(DECOMP_2D_COMM_COL)
+    call decomp_2d_comm_free(DECOMP_2D_COMM_CART_X)
+    call decomp_2d_comm_free(DECOMP_2D_COMM_CART_Y)
+    call decomp_2d_comm_free(DECOMP_2D_COMM_CART_Z)
 
-    ! Nothing more to do if MPI3 shared memory and the rank is not local master
-    if (DECOMP_2D_COMM == MPI_COMM_NULL) return
-
-    ierror = 0
-    if (DECOMP_2D_COMM /= MPI_COMM_WORLD) call MPI_COMM_FREE(DECOMP_2D_COMM, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
-    call MPI_COMM_FREE(DECOMP_2D_COMM_ROW, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
-    call MPI_COMM_FREE(DECOMP_2D_COMM_COL, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
-    call MPI_COMM_FREE(DECOMP_2D_COMM_CART_X, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
-    call MPI_COMM_FREE(DECOMP_2D_COMM_CART_Y, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
-    call MPI_COMM_FREE(DECOMP_2D_COMM_CART_Z, ierror)
-    if (ierror /= 0) call decomp_2d_warning(__FILE__, __LINE__, ierror, "MPI_COMM_FREE")
+    ! Free the main decomp_info object
     call decomp_info_finalize(decomp_main)
 
   end subroutine decomp_2d_finalize
