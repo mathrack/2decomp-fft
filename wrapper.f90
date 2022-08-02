@@ -31,9 +31,10 @@ contains
 
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
       if (src_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
 #endif
+      if (.not. d2d_intranode) return
+      if (nproc_loc <= 1) return
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
@@ -58,9 +59,10 @@ contains
 
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
       if (src_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
 #endif
+      if (.not. d2d_intranode) return
+      if (nproc_loc <= 1) return
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
@@ -85,9 +87,10 @@ contains
 
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
       if (dst_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
 #endif
+      if (.not. d2d_intranode) return
+      if (nproc_loc <= 1) return
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
@@ -110,9 +113,10 @@ contains
 
       ! Safety check only in debug mode
 #ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
       if (dst_win == MPI_WIN_NULL) call decomp_2d_abort(-1, "Error")
 #endif
+      if (.not. d2d_intranode) return
+      if (nproc_loc <= 1) return
 
       if (transpose_win_sync_with_fence) then
          ! Basic sync. using mpi_win_fence
