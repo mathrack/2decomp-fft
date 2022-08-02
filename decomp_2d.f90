@@ -157,9 +157,10 @@ module decomp_2d
 
   ! These are the buffers used by MPI_ALLTOALL(V) calls
   integer, save :: decomp_buf_size = 0
-  integer, save :: work1_r_win, work2_r_win, work1_c_win, work2_c_win
+  integer, save :: work1_r_win, work2_r_win
   real(mytype), pointer, dimension(:) :: work1_r, work2_r
-  complex(mytype), pointer, dimension(:) :: work1_c, work2_c
+  integer, save, public :: work1_c_win, work2_c_win
+  complex(mytype), pointer, dimension(:), public :: work1_c, work2_c
 
 #if defined(_GPU)
   integer, save :: work1_r_d_win, work2_r_d_win, work1_c_d_win, work2_c_d_win
@@ -189,6 +190,8 @@ module decomp_2d
   ! public user routines
   public :: decomp_2d_init, decomp_2d_finalize, &
        decomp_2d_win_fence, decomp_2d_win_free, &
+       decomp_2d_win_transpose_start_writing, &
+       decomp_2d_win_transpose_stop_writing, &
        transpose_x_to_y, transpose_y_to_z, &
        transpose_z_to_y, transpose_y_to_x, &
        decomp_info_init, decomp_info_finalize, &

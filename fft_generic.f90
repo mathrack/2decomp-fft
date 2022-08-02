@@ -69,7 +69,7 @@ module decomp_2d_fft
   ! the basis of three-dimensional FFTs.
 
   ! c2c transform, multiple 1D FFTs
-  subroutine c2c_1m_2d(inout, isign, n1, n2)
+  subroutine c2c_1m_2d(inout, isign, n1, n2, idir)
 
     !$acc routine(spcfft) seq
 
@@ -77,11 +77,18 @@ module decomp_2d_fft
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
     integer, intent(IN) :: isign, n1, n2
+    integer, intent(in), optional :: idir
 
     integer :: i,j
 
+    ! This is needed before writing to the MPI3 shared memory
+    if (present(idir).and.d2d_intranode) &
+       call decomp_2d_win_transpose_start_writing(work1_c_win)
+
     !$acc parallel loop gang vector private(buf, scratch)
     do j=1,n2
+       !
+       ! Compute 1D FFT
        do i=1,n1
           buf(i) = inout(i,j)
        end do
@@ -89,52 +96,102 @@ module decomp_2d_fft
        do i=1,n1
           inout(i,j) = buf(i)
        end do
+       !
+       ! Write to the MPI3 shared memory
+       ! Construction of the sending buffer in progress
+       if (present(idir).and.d2d_intranode) then
+          select case (idir)
+          case (12)
+             ! x => y, ph
+             do i = 1, n1
+                work1_c(ph%intramap_split(i,j,1)) = buf(i)
+             enddo
+          case (120)
+             ! x => y, sp
+             do i = 1, n1
+                work1_c(sp%intramap_split(i,j,1)) = buf(i)
+             enddo
+          case (23)
+             ! y => z, ph
+             do i = 1, n1
+                work1_c(ph%intramap_split(i,j,3)) = buf(i)
+             enddo
+          case (230)
+             ! y => z, sp
+             do i = 1, n1
+                work1_c(sp%intramap_split(i,j,3)) = buf(i)
+             enddo
+          case (32)
+             ! z => y, ph
+             do i = 1, n1
+                work1_c(ph%intramap_split(i,j,4)) = buf(i)
+             enddo
+          case(320)
+             ! z => y, sp
+             do i = 1, n1
+                work1_c(sp%intramap_split(i,j,4)) = buf(i)
+             enddo
+          case (21)
+             ! y => x, ph
+             do i = 1, n1
+                work1_c(ph%intramap_split(i,j,2)) = buf(i)
+             enddo
+          case (210)
+             ! y => x, sp
+             do i = 1, n1
+                work1_c(sp%intramap_split(i,j,2)) = buf(i)
+             enddo
+          end select
+       endif
     end do
     !$acc end parallel loop
 
   end subroutine c2c_1m_2d
 
   ! c2c transform, multiple 1D FFTs in x direction
-  subroutine c2c_1m_x_2d(inout, isign, decomp)
+  subroutine c2c_1m_x_2d(inout, isign, decomp, idir)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+    integer, intent(in), optional :: idir
 
-    call c2c_1m_2d(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%xsz_loc(1), decomp%xsz_loc(2)*decomp%xsz_loc(3), idir)
 
   end subroutine c2c_1m_x_2d
 
   ! c2c transform, multiple 1D FFTs in y direction
-  subroutine c2c_1m_y_2d(inout, isign, decomp)
+  subroutine c2c_1m_y_2d(inout, isign, decomp, idir)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+    integer, intent(in), optional :: idir
 
-    call c2c_1m_2d(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%ysz_loc(1), decomp%ysz_loc(2)*decomp%ysz_loc(3), idir)
 
   end subroutine c2c_1m_y_2d
 
   ! c2c transform, multiple 1D FFTs in z direction
-  subroutine c2c_1m_z_2d(inout, isign, decomp)
+  subroutine c2c_1m_z_2d(inout, isign, decomp, idir)
 
     implicit none
 
     complex(mytype), dimension(:,:), intent(INOUT) :: inout
     integer, intent(IN) :: isign
     TYPE(DECOMP_INFO), intent(IN) :: decomp
+    integer, intent(in), optional :: idir
 
-    call c2c_1m_2d(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3))
+    call c2c_1m_2d(inout, isign, decomp%zsz_loc(1), decomp%zsz_loc(2)*decomp%zsz_loc(3), idir)
 
   end subroutine c2c_1m_z_2d
 
   ! r2c transform, multiple 1D FFTs in x direction
-  subroutine r2c_1m_x_2d(input, output)
+  subroutine r2c_1m_x_2d(input, output, idir)
 
     !$acc routine(spcfft) seq
 
@@ -142,12 +199,17 @@ module decomp_2d_fft
 
     real(mytype), dimension(:,:), intent(IN)  ::  input
     complex(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in), optional :: idir
 
     integer :: i,j, s1,s2, d1
 
     s1 = size(input,1)
     s2 = size(input,2)
     d1 = size(output,1)
+
+    ! This is needed before writing to the MPI3 shared memory
+    if (present(idir).and.d2d_intranode) &
+       call decomp_2d_win_transpose_start_writing(work1_c_win)
 
     !$acc parallel loop gang vector private(buf, scratch)
     do j=1,s2
@@ -163,20 +225,37 @@ module decomp_2d_fft
        do i=1,d1
           output(i,j) = buf(i)
        end do
+       !
+       ! Write to the MPI3 shared memory
+       ! Construction of the sending buffer in progress
+       if (present(idir).and.d2d_intranode) then
+          if (idir==120) then
+             ! x => y, sp
+             do i = 1, d1
+                work1_c(sp%intramap_split(i,j,1)) = buf(i)
+             enddo
+          else
+             ! z => y, sp
+             do i = 1, d1
+                work1_c(sp%intramap_split(i,j,4)) = buf(i)
+             enddo
+          endif
+       endif
     end do
     !$acc end parallel loop
 
   end subroutine r2c_1m_x_2d
 
   ! r2c transform, multiple 1D FFTs in z direction
-  subroutine r2c_1m_z_2d(input, output)
+  subroutine r2c_1m_z_2d(input, output, idir)
 
     implicit none
 
     real(mytype), dimension(:,:), intent(IN)  ::  input
     complex(mytype), dimension(:,:), intent(OUT) :: output
+    integer, intent(in), optional :: idir
 
-    call r2c_1m_x(input, output)
+    call r2c_1m_x(input, output, idir)
 
   end subroutine r2c_1m_z_2d
 

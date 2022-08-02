@@ -11,15 +11,17 @@
 
 ! This file contains the routines that transpose data from Y to X pencil
 
-  subroutine transpose_y_to_x_data(src, dst)
+  subroutine transpose_y_to_x_data(src, dst, no_prepro)
 
     implicit none
 
     ! Arguments
     type(decomp_data), intent(in) :: src
     type(decomp_data), intent(inout) :: dst
+    logical, optional :: no_prepro
 
     ! Local variables
+    logical :: prepro
     integer :: s1, s2, s3, d1, d2, d3, ierror
 #if defined(_GPU)
 #if defined(_NCCL)
@@ -36,6 +38,13 @@
        call decomp_2d_abort(__FILE__, __LINE__, -1, "Impossible transpose operation")
 #endif
 
+    ! Default value : prepro is needed
+    if (.not.present(no_prepro)) then
+       prepro = .true.
+    else
+       prepro = .not.no_prepro
+    endif
+
     s1 = src%decomp%ysz(1)
     s2 = src%decomp%ysz(2)
     s3 = src%decomp%ysz(3)
@@ -44,7 +53,7 @@
     d3 = src%decomp%xsz(3)
 
     ! In case of MPI3 shared memory, local master starts reading
-    if (d2d_intranode) then
+    if (d2d_intranode .and. prepro) then
        call decomp_2d_win_transpose_start_reading(src%win)
        if (src%is_cplx) then
           call decomp_2d_win_transpose_start_writing(work1_c_win)
@@ -54,6 +63,7 @@
     endif
 
     ! rearrange source array as send buffer
+    if (prepro .or. (.not.d2d_intranode)) then
     if (src%is_cplx) then
 #if defined(_GPU) 
        call mem_split_yx_complex(src%cvar, s1, s2, s3, work1_c_d, dims(1), &
@@ -71,10 +81,11 @@
             src%decomp%y1dist, src%decomp)
 #endif
     endif
+    endif
 
     ! In case of MPI3 shared memory, local master is done reading
     if (d2d_intranode) then
-       call decomp_2d_win_transpose_stop_reading(src%win)
+       if (prepro) call decomp_2d_win_transpose_stop_reading(src%win)
        if (src%is_cplx) then
           call decomp_2d_win_transpose_stop_writing(work1_c_win)
        else
