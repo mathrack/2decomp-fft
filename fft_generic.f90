@@ -69,33 +69,6 @@ module decomp_2d_fft
   ! the basis of three-dimensional FFTs.
 
   ! c2c transform, multiple 1D FFTs
-  subroutine c2c_1m_3d(inout, isign, n1, n2, n3)
-
-    !$acc routine(spcfft) seq
-
-    implicit none
-
-    complex(mytype), dimension(:,:,:), intent(INOUT) :: inout
-    integer, intent(IN) :: isign, n1, n2, n3
-
-    integer :: i,j,k
-
-    !$acc parallel loop gang vector collapse(2) private(buf, scratch)
-    do k=1,n3
-       do j=1,n2
-          do i=1,n1
-             buf(i) = inout(i,j,k)
-          end do
-          call spcfft(buf,n1,isign,scratch)
-          do i=1,n1
-             inout(i,j,k) = buf(i)
-          end do
-       end do
-    end do
-    !$acc end parallel loop
-
-  end subroutine c2c_1m_3d
-
   subroutine c2c_1m_2d(inout, isign, n1, n2)
 
     !$acc routine(spcfft) seq
