@@ -170,9 +170,7 @@ contains
       integer :: ierror
 
       ! Safety check
-#ifdef DEBUG
-      if (.not. d2d_intranode) call decomp_2d_abort(-1, "Error")
-#endif
+      if (.not. d2d_intranode) return
       if (win == MPI_WIN_NULL) return
 
       call MPI_WIN_FREE(win, ierror)
