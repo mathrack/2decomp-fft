@@ -125,11 +125,11 @@ call r2c_1m_x(in_r%var2d,wk13%cvar2d)
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
 call transpose_x_to_y(wk13,wk2_r2c)
-call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,DECOMP_2D_FFT_FORWARD,sp)
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
 call transpose_y_to_z(wk2_r2c,out_c)
-call c2c_1m_z(out_c%cvar2d,-1,sp)
+call c2c_1m_z(out_c%cvar2d,DECOMP_2D_FFT_FORWARD,sp)
 
 else if (format==PHYSICAL_IN_Z) then
 
@@ -138,11 +138,11 @@ call r2c_1m_z(in_r%var2d,wk13%cvar2d)
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
 call transpose_z_to_y(wk13,wk2_r2c)
-call c2c_1m_y(wk2_r2c%cvar2d,-1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,DECOMP_2D_FFT_FORWARD,sp)
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
 call transpose_y_to_x(wk2_r2c,out_c)
-call c2c_1m_x(out_c%cvar2d,-1,sp)
+call c2c_1m_x(out_c%cvar2d,DECOMP_2D_FFT_FORWARD,sp)
 
 endif
 
@@ -169,11 +169,11 @@ if (format==PHYSICAL_IN_X) then
 
 ! ===== 1D FFTs in Z =====
 #ifdef OVERWRITE
-call c2c_1m_z(in_c%cvar2d,1,sp)
+call c2c_1m_z(in_c%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 #else
 call wk1%copy(in_c)
 wk1%cvar2d = in_c%cvar2d
-call c2c_1m_z(wk1%cvar2d,1,sp)
+call c2c_1m_z(wk1%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 #endif
 
 ! ===== Swap Z --> Y; 1D FFTs in Y =====
@@ -182,7 +182,7 @@ call transpose_z_to_y(in_c,wk2_r2c)
 #else
 call transpose_z_to_y(wk1,wk2_r2c)
 #endif
-call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 
 ! ===== Swap Y --> X; 1D FFTs in X =====
 call transpose_y_to_x(wk2_r2c,wk13)
@@ -192,11 +192,11 @@ else if (format==PHYSICAL_IN_Z) then
 
 ! ===== 1D FFTs in X =====
 #ifdef OVERWRITE
-call c2c_1m_x(in_c%cvar2d,1,sp)
+call c2c_1m_x(in_c%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 #else
-call wk1%init(is_cplx=.true., idir=1, decomp=sp)
+call wk1%copy(in_c)
 wk1%cvar2d = in_c%cvar2d
-call c2c_1m_x(wk1%cvar2d,1,sp)
+call c2c_1m_x(wk1%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 #endif
 
 ! ===== Swap X --> Y; 1D FFTs in Y =====
@@ -205,7 +205,7 @@ call transpose_x_to_y(in_c,wk2_r2c)
 #else
 call transpose_x_to_y(wk1,wk2_r2c)
 #endif
-call c2c_1m_y(wk2_r2c%cvar2d,1,sp)
+call c2c_1m_y(wk2_r2c%cvar2d,DECOMP_2D_FFT_BACKWARD,sp)
 
 ! ===== Swap Y --> Z; 1D FFTs in Z =====
 call transpose_y_to_z(wk2_r2c,wk13)
