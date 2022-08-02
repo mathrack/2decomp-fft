@@ -238,10 +238,10 @@ contains
 
       implicit none
 
-      if (work1_r_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_r_win)
-      if (work2_r_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_r_win)
-      if (work1_c_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_c_win)
-      if (work2_c_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_c_win)
+      call decomp_2d_win_free(work1_r_win)
+      call decomp_2d_win_free(work2_r_win)
+      call decomp_2d_win_free(work1_c_win)
+      call decomp_2d_win_free(work2_c_win)
       if (d2d_intranode) then
          if (associated(work1_r)) nullify (work1_r)
          if (associated(work2_r)) nullify (work2_r)
@@ -254,10 +254,10 @@ contains
          if (associated(work2_c)) deallocate (work2_c)
       end if
 #if defined(_GPU)
-      if (work1_r_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_r_d_win)
-      if (work2_r_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_r_d_win)
-      if (work1_c_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work1_c_d_win)
-      if (work2_c_d_win /= MPI_WIN_NULL) call decomp_2d_win_free(work2_c_d_win)
+      call decomp_2d_win_free(work1_r_d_win)
+      call decomp_2d_win_free(work2_r_d_win)
+      call decomp_2d_win_free(work1_c_d_win)
+      call decomp_2d_win_free(work2_c_d_win)
       if (d2d_intranode) then
          if (associated(work1_r_d)) nullify (work1_r_d)
          if (associated(work2_r_d)) nullify (work2_r_d)
