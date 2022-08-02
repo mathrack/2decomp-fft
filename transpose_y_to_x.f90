@@ -197,6 +197,15 @@
 
     integer :: i,j,k, m,i1,i2,i3, pos
 
+    if (d2d_intranode) then
+       do k = 1, decomp%ysz_loc(3)
+          do j = 1, decomp%ysz_loc(1)
+             out(decomp%intramap_split(j,k,2)) = in%var2d(j,k)
+          enddo
+       enddo
+       return
+    endif
+
     do m=0,iproc-1
        if (m==0) then 
           i1 = 1
@@ -216,21 +225,13 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode) then
-          do k = 1, decomp%ysz_loc(3)
-             do j = i1, i2
-                out(decomp%intramap_split(j,k,2)) = in%var2d(j,k)
-             enddo
-          enddo
-       else
-          do k=1,n3
-             do i=1,n2
-                do j=i1,i2
-                   out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%var(j,i,k)
-                end do
+       do k=1,n3
+          do i=1,n2
+             do j=i1,i2
+                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%var(j,i,k)
              end do
           end do
-       endif
+       end do
 #endif
     end do
 
@@ -255,6 +256,15 @@
 
     integer :: i,j,k, m,i1,i2,i3, pos
 
+    if (d2d_intranode) then
+       do k = 1, decomp%ysz_loc(3)
+          do j = 1, decomp%ysz_loc(1)
+             out(decomp%intramap_split(j,k,2)) = in%cvar2d(j,k)
+          enddo
+       enddo
+       return
+    endif
+
     do m=0,iproc-1
        if (m==0) then 
           i1 = 1
@@ -274,21 +284,13 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(pos), n1*(i2-i1+1), in(1,i1,1), n1*n2, n1*(i2-i1+1), n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode) then
-          do k = 1, decomp%ysz_loc(3)
-             do j = i1, i2
-                out(decomp%intramap_split(j,k,2)) = in%cvar2d(j,k)
-             enddo
-          enddo
-       else
-          do k=1,n3
-             do i=1,n2
-                do j=i1,i2
-                   out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%cvar(j,i,k)
-                end do
+       do k=1,n3
+          do i=1,n2
+             do j=i1,i2
+                out(pos + i-1 + n2*(j-i1) + n2*i3*(k-1)) = in%cvar(j,i,k)
              end do
           end do
-       endif
+       end do
 #endif
     end do
 
@@ -313,6 +315,15 @@
 
     integer :: i,j,k, m,i1,i2,i3, pos
 
+    if (d2d_intranode) then
+       do k = 1, decomp%xsz_loc(3)
+          do i = 1, decomp%xsz_loc(1)
+             out%var2d(i,k) = in(decomp%intramap_merge(i,k,2))
+          enddo
+       enddo
+       return
+    endif
+
     do m=0,iproc-1
        if (m==0) then
           i1 = 1
@@ -332,21 +343,13 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(i1,1,1), n1, in(pos), i2-i1+1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode) then
-          do k = 1, decomp%xsz_loc(3)
-             do i = i1, i2
-                out%var2d(i,k) = in(decomp%intramap_merge(i,k,2))
-             enddo
-          enddo
-       else
-          do k=1,n3
-             do j=1,n2
-                do i=i1,i2
-                   out%var(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
-                end do
+       do k=1,n3
+          do j=1,n2
+             do i=i1,i2
+                out%var(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
              end do
           end do
-       endif
+       end do
 #endif
     end do
 
@@ -371,6 +374,15 @@
 
     integer :: i,j,k, m,i1,i2,i3, pos
 
+    if (d2d_intranode) then
+       do k = 1, decomp%xsz_loc(3)
+          do i = 1, decomp%xsz_loc(1)
+             out%cvar2d(i,k) = in(decomp%intramap_merge(i,k,2))
+          enddo
+       enddo
+       return
+    endif
+
     do m=0,iproc-1
        if (m==0) then
           i1 = 1
@@ -390,21 +402,13 @@
 #if defined(_GPU)
        istat = cudaMemcpy2D( out(i1,1,1), n1, in(pos), i2-i1+1, i2-i1+1, n2*n3, cudaMemcpyDeviceToDevice )
 #else
-       if (d2d_intranode) then
-          do k = 1, decomp%xsz_loc(3)
-             do i = i1, i2
-                out%cvar2d(i,k) = in(decomp%intramap_merge(i,k,2))
-             enddo
-          enddo
-       else
-          do k=1,n3
-             do j=1,n2
-                do i=i1,i2
-                   out%cvar(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
-                end do
+       do k=1,n3
+          do j=1,n2
+             do i=i1,i2
+                out%cvar(i,j,k) = in(pos + i-i1 + i3*(j-1) + i3*n2*(k-1))
              end do
           end do
-       endif
+       end do
 #endif
     end do
 
