@@ -32,3 +32,30 @@ jobs:
 
     - name: Examples
       run: make examples
+
+  bld_intel:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v3
+
+    # Add Intel OneApi
+    - name: setup repo
+      run: |
+        sudo echo "deb [trusted=yes] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+    # Install dependencies
+    - name: install
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y intel-oneapi-common-vars intel-oneapi-compiler-fortran intel-oneapi-mkl intel-oneapi-mkl-devel intel-oneapi-mpi intel-oneapi-mpi-devel
+
+    # Runs a set of commands using the runners shell
+    - name: Compile
+      run: source /opt/intel/oneapi/setvars.sh && make CMP=intel BUILD=debug && make examples
+
+    # Runs a set of commands using the runners shell
+    - name: Compile with MKL
+      run: source /opt/intel/oneapi/setvars.sh && make CMP=intel FFT=mkl BUILD=debug && make examples
