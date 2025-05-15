@@ -567,9 +567,7 @@ contains
    subroutine test_halo_size(arrh, nx_expected, ny_expected, nz_expected, tag)
 
       real(mytype), dimension(:, :, :), intent(in) :: arrh
-#if defined(_GPU)
-      attributes(device) :: arrh
-#endif
+
       integer, intent(in) :: nx_expected, ny_expected, nz_expected
       character(len=*), intent(in) :: tag
 
