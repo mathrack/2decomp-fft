@@ -287,9 +287,9 @@ contains
 
       halo_extents = halo_extents_t(1, [s1, s2, s3], decomp_main, 1, global)
 
-      call alloc_x(vh, opt_global=global, opt_levels=[0, 1, 1])
+      call alloc_x(vh, opt_global=global, opt_level=1)
       call alloc_x(wh, opt_global=global, opt_levels=[0, 1, 1])
-      
+
       ! Populate interiors
       !$acc data copy(halo_extents)
       !$acc kernels default(present)
@@ -385,7 +385,7 @@ contains
 
       halo_extents = halo_extents_t(2, [s1, s2, s3], decomp_main, 1, global)
 
-      call alloc_y(uh, opt_global=global, opt_levels=[1, 0, 1])
+      call alloc_y(uh, opt_global=global, opt_level=1)
       call alloc_y(wh, opt_global=global, opt_levels=[1, 0, 1])
 
       ! Populate interiors
@@ -477,7 +477,7 @@ contains
 
       halo_extents = halo_extents_t(3, [s1, s2, s3], decomp_main, 1, global)
 
-      call alloc_z(uh, opt_global=global, opt_levels=[1, 1, 0])
+      call alloc_z(uh, opt_global=global, opt_level=1)
       call alloc_z(vh, opt_global=global, opt_levels=[1, 1, 0])
 
       ! Populate interiors
