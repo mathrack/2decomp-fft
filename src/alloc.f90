@@ -49,6 +49,9 @@
         levels = decomp%ylevel
      else if (ipencil == 3) then
         levels = decomp%zlevel
+     else
+        levels = 0
+        call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
      end if
 
      if (global .and. ipencil == 1) then
