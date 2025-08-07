@@ -406,14 +406,15 @@ contains
    ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_real_short(arr, ipencil, opt_levels)
+   subroutine halo_exchange_real_short(arr, ipencil, opt_level, opt_levels)
 
      real(mytype), dimension(:,:,:), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
 #endif
      integer, intent(in) :: ipencil
-     integer, dimension(3), optional :: opt_levels
+     integer, intent(in), optional :: opt_level
+     integer, intent(in), dimension(3), optional :: opt_levels
 
      integer, dimension(3) :: levels
      integer, dimension(3) :: sizes
@@ -421,19 +422,18 @@ contains
 
      if (present(opt_levels)) then
         levels = opt_levels
+     else if (present(opt_level)) then
+        levels(:) = opt_level
+        levels(ipencil) = 0
+     else if (ipencil == 1) then
+        levels = decomp_main%xlevel
+     else if (ipencil == 2) then
+        levels = decomp_main%ylevel
+     else if (ipencil == 3) then
+        levels = decomp_main%zlevel
      else
-        select case(ipencil)
-        case(1)
-           levels = decomp_main%xlevel
-        case(2)
-           levels = decomp_main%ylevel
-        case(3)
-           levels = decomp_main%zlevel
-        case default
-           levels = 0
-           call decomp_2d_abort(__FILE__, __LINE__, 10, &
-                "Invalid pencil for halo exchange")
-        end select
+        levels = 0
+        call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
      end if
 
      sizes(1) = size(arr, dim=1)
@@ -507,13 +507,14 @@ contains
    ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_complex_short(arr, ipencil, opt_levels)
+   subroutine halo_exchange_complex_short(arr, ipencil, opt_level, opt_levels)
      complex(mytype), dimension(:,:,:), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
 #endif
      integer, intent(in) :: ipencil
-     integer, dimension(3), intent(in), optional :: opt_levels
+     integer, intent(in), optional :: opt_level
+     integer, intent(in), dimension(3), optional :: opt_levels
 
      integer, dimension(3) :: levels
      integer, dimension(3) :: sizes
@@ -521,19 +522,18 @@ contains
 
      if (present(opt_levels)) then
         levels = opt_levels
+     else if (present(opt_level)) then
+        levels(:) = opt_level
+        levels(ipencil) = 0
+     else if (ipencil == 1) then
+        levels = decomp_main%xlevel
+     else if (ipencil == 2) then
+        levels = decomp_main%ylevel
+     else if (ipencil == 3) then
+        levels = decomp_main%zlevel
      else
-        select case(ipencil)
-        case(1)
-           levels = decomp_main%xlevel
-        case(2)
-           levels = decomp_main%ylevel
-        case(3)
-           levels = decomp_main%zlevel
-        case default
-           levels = 0
-           call decomp_2d_abort(__FILE__, __LINE__, 10, &
-                "Invalid pencil for halo exchange")
-        end select
+        levels = 0
+        call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
      end if
 
      sizes(1) = size(arr, dim=1)
