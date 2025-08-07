@@ -39,8 +39,10 @@ module m_halo
    interface halo_exchange
       procedure halo_exchange_real
       procedure halo_exchange_real_short
+      procedure halo_exchange_real_short_vec
       procedure halo_exchange_complex
       procedure halo_exchange_complex_short
+      procedure halo_exchange_complex_short_vec
    end interface halo_exchange
 
    private
@@ -304,9 +306,9 @@ contains
       levels(ipencil) = 0
 
       halo_extents = init_halo_extents(ipencil, sizes, decomp, levels, global)
-      
+
    end function init_halo_extents_short
-   
+
    !---------------------------------------------------------------------
    ! Full constructor for the halo_extents_t type. Applies a user specified halo depth per axis.
    ! - ipencil: The pencil orientation
@@ -395,8 +397,34 @@ contains
       halo_extents%ye = halo_extents%ye + levels(2)
       halo_extents%zs = halo_extents%zs - levels(3)
       halo_extents%ze = halo_extents%ze + levels(3)
-      
+
    end function init_halo_extents
+
+   !---------------------------------------------------------------------
+   ! Simplified interface for performing the halo data exchange.
+   ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
+   !               entries.
+   ! -    ipencil: The pencil orientation.
+   ! -      level: The per-axis halo depths to use, if not supplied will use the default depths in
+   !               decomp_main.
+   !---------------------------------------------------------------------
+   subroutine halo_exchange_real_short(arr, ipencil, level)
+
+      real(mytype), dimension(:, :, :), intent(inout) :: arr
+#if defined(_GPU)
+      attributes(device) :: arr
+#endif
+      integer, intent(in) :: ipencil
+      integer, intent(in) :: level
+
+      integer, dimension(3) :: levels
+
+      levels(:) = level
+      levels(ipencil) = 0
+
+      call halo_exchange(arr, ipencil, opt_levels=levels)
+
+   end subroutine halo_exchange_real_short
 
    !---------------------------------------------------------------------
    ! Simplified interface for performing the halo data exchange.
@@ -406,45 +434,41 @@ contains
    ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_real_short(arr, ipencil, opt_level, opt_levels)
+   subroutine halo_exchange_real_short_vec(arr, ipencil, opt_levels)
 
-     real(mytype), dimension(:,:,:), intent(inout) :: arr
+      real(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
 #endif
-     integer, intent(in) :: ipencil
-     integer, intent(in), optional :: opt_level
-     integer, intent(in), dimension(3), optional :: opt_levels
+      integer, intent(in) :: ipencil
+      integer, intent(in), dimension(3), optional :: opt_levels
 
-     integer, dimension(3) :: levels
-     integer, dimension(3) :: sizes
-     type(halo_extents_t) :: halo_extents
+      integer, dimension(3) :: levels
+      integer, dimension(3) :: sizes
+      type(halo_extents_t) :: halo_extents
 
-     if (present(opt_levels)) then
-        levels = opt_levels
-     else if (present(opt_level)) then
-        levels(:) = opt_level
-        levels(ipencil) = 0
-     else if (ipencil == 1) then
-        levels = decomp_main%xlevel
-     else if (ipencil == 2) then
-        levels = decomp_main%ylevel
-     else if (ipencil == 3) then
-        levels = decomp_main%zlevel
-     else
-        levels = 0
-        call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
-     end if
+      if (present(opt_levels)) then
+         levels = opt_levels
+      else if (ipencil == 1) then
+         levels = decomp_main%xlevel
+      else if (ipencil == 2) then
+         levels = decomp_main%ylevel
+      else if (ipencil == 3) then
+         levels = decomp_main%zlevel
+      else
+         levels = 0
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
+      end if
 
-     sizes(1) = size(arr, dim=1)
-     sizes(2) = size(arr, dim=2)
-     sizes(3) = size(arr, dim=3)
-     sizes = sizes - 2 * levels
-     halo_extents = init_halo_extents(ipencil, sizes, decomp_main, levels, .false.)
+      sizes(1) = size(arr, dim=1)
+      sizes(2) = size(arr, dim=2)
+      sizes(3) = size(arr, dim=3)
+      sizes = sizes - 2 * levels
+      halo_extents = init_halo_extents(ipencil, sizes, decomp_main, levels, .false.)
 
-     call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
+      call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
 
-   end subroutine halo_exchange_real_short
+   end subroutine halo_exchange_real_short_vec
 
    !---------------------------------------------------------------------
    ! Full interface for performing the halo data exchange.
@@ -504,48 +528,69 @@ contains
    ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
    !               entries.
    ! -    ipencil: The pencil orientation.
-   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
+   ! -      level: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_complex_short(arr, ipencil, opt_level, opt_levels)
-     complex(mytype), dimension(:,:,:), intent(inout) :: arr
+   subroutine halo_exchange_complex_short(arr, ipencil, level)
+      complex(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
 #endif
-     integer, intent(in) :: ipencil
-     integer, intent(in), optional :: opt_level
-     integer, intent(in), dimension(3), optional :: opt_levels
+      integer, intent(in) :: ipencil
+      integer, intent(in) :: level
 
-     integer, dimension(3) :: levels
-     integer, dimension(3) :: sizes
-     type(halo_extents_t) :: halo_extents
+      integer, dimension(3) :: levels
 
-     if (present(opt_levels)) then
-        levels = opt_levels
-     else if (present(opt_level)) then
-        levels(:) = opt_level
-        levels(ipencil) = 0
-     else if (ipencil == 1) then
-        levels = decomp_main%xlevel
-     else if (ipencil == 2) then
-        levels = decomp_main%ylevel
-     else if (ipencil == 3) then
-        levels = decomp_main%zlevel
-     else
-        levels = 0
-        call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
-     end if
+      levels(:) = level
+      levels(ipencil) = 0
 
-     sizes(1) = size(arr, dim=1)
-     sizes(2) = size(arr, dim=2)
-     sizes(3) = size(arr, dim=3)
-     sizes = sizes - 2 * levels
-     halo_extents = init_halo_extents(ipencil, sizes, decomp_main, levels, .false.)
+      call halo_exchange(arr, ipencil, opt_levels=levels)
 
-     call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
-     
    end subroutine halo_exchange_complex_short
-   
+
+   !---------------------------------------------------------------------
+   ! Simplified interface for performing the halo data exchange.
+   ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
+   !               entries.
+   ! -    ipencil: The pencil orientation.
+   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
+   !               decomp_main.
+   !---------------------------------------------------------------------
+   subroutine halo_exchange_complex_short_vec(arr, ipencil, opt_levels)
+      complex(mytype), dimension(:, :, :), intent(inout) :: arr
+#if defined(_GPU)
+      attributes(device) :: arr
+#endif
+      integer, intent(in) :: ipencil
+      integer, intent(in), dimension(3), optional :: opt_levels
+
+      integer, dimension(3) :: levels
+      integer, dimension(3) :: sizes
+      type(halo_extents_t) :: halo_extents
+
+      if (present(opt_levels)) then
+         levels = opt_levels
+      else if (ipencil == 1) then
+         levels = decomp_main%xlevel
+      else if (ipencil == 2) then
+         levels = decomp_main%ylevel
+      else if (ipencil == 3) then
+         levels = decomp_main%zlevel
+      else
+         levels = 0
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid levels")
+      end if
+
+      sizes(1) = size(arr, dim=1)
+      sizes(2) = size(arr, dim=2)
+      sizes(3) = size(arr, dim=3)
+      sizes = sizes - 2 * levels
+      halo_extents = init_halo_extents(ipencil, sizes, decomp_main, levels, .false.)
+
+      call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
+
+   end subroutine halo_exchange_complex_short_vec
+
    !---------------------------------------------------------------------
    ! Full interface for performing the halo data exchange.
    ! -          arr: The halo array, local data is sent to neighbours, on return contains updated halo

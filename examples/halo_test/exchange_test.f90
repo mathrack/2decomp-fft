@@ -322,7 +322,7 @@ contains
       ifirst = 2; ilast = xsize(1) - 1
 
       call halo_exchange(vh, 1, halo_extents, [0, 1, 1], [s1, s2, s3])
-      call halo_exchange(wh, 1, [0, 1, 1])
+      call halo_exchange(wh, 1, 1)
 
       !$acc data copy(div1)
       !$acc kernels default(present)
@@ -418,7 +418,7 @@ contains
       jfirst = 2; jlast = ysize(2) - 1
 
       call halo_exchange(uh, 2, halo_extents, [1, 0, 1], [s1, s2, s3])
-      call halo_exchange(wh, 2, [1, 0, 1])
+      call halo_exchange(wh, 2, 1)
 
       !$acc data copy(div2)
       !$acc kernels default(present)
@@ -514,7 +514,7 @@ contains
       kfirst = 2; klast = zsize(3) - 1
 
       call halo_exchange(uh, 3, halo_extents, [1, 1, 0], [s1, s2, s3])
-      call halo_exchange(vh, 3, [1, 1, 0])
+      call halo_exchange(vh, 3, 1)
 
       !$acc data copy(div3)
       !$acc kernels default(present)
