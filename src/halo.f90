@@ -38,11 +38,11 @@ module m_halo
 
    interface halo_exchange
       procedure halo_exchange_real
-      procedure halo_exchange_real_short
-      procedure halo_exchange_real_short_vec
+      procedure halo_exchange_real_short1
+      procedure halo_exchange_real_short3
       procedure halo_exchange_complex
-      procedure halo_exchange_complex_short
-      procedure halo_exchange_complex_short_vec
+      procedure halo_exchange_complex_short1
+      procedure halo_exchange_complex_short3
    end interface halo_exchange
 
    private
@@ -405,10 +405,11 @@ contains
    ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
    !               entries.
    ! -    ipencil: The pencil orientation.
-   ! -      level: The per-axis halo depths to use, if not supplied will use the default depths in
+   ! -      level: The halo depth when the direction is not the ipencil one
+   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_real_short(arr, ipencil, level)
+   subroutine halo_exchange_real_short1(arr, ipencil, level)
 
       real(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
@@ -419,22 +420,19 @@ contains
 
       integer, dimension(3) :: levels
 
+      ! Safety check
+      if (ipencil < 1 .or. ipencil > 3) then
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid argument")
+      end if
+
       levels(:) = level
       levels(ipencil) = 0
 
-      call halo_exchange(arr, ipencil, opt_levels=levels)
+      call halo_exchange(arr, ipencil, opt_levels = levels)
 
-   end subroutine halo_exchange_real_short
+   end subroutine halo_exchange_real_short1
 
-   !---------------------------------------------------------------------
-   ! Simplified interface for performing the halo data exchange.
-   ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
-   !               entries.
-   ! -    ipencil: The pencil orientation.
-   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
-   !               decomp_main.
-   !---------------------------------------------------------------------
-   subroutine halo_exchange_real_short_vec(arr, ipencil, opt_levels)
+   subroutine halo_exchange_real_short3(arr, ipencil, opt_levels)
 
       real(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
@@ -446,6 +444,11 @@ contains
       integer, dimension(3) :: levels
       integer, dimension(3) :: sizes
       type(halo_extents_t) :: halo_extents
+
+      ! Safety check
+      if (ipencil < 1 .or. ipencil > 3) then
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid argument")
+      end if
 
       if (present(opt_levels)) then
          levels = opt_levels
@@ -468,7 +471,7 @@ contains
 
       call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
 
-   end subroutine halo_exchange_real_short_vec
+   end subroutine halo_exchange_real_short3
 
    !---------------------------------------------------------------------
    ! Full interface for performing the halo data exchange.
@@ -528,10 +531,12 @@ contains
    ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
    !               entries.
    ! -    ipencil: The pencil orientation.
-   ! -      level: The per-axis halo depths to use, if not supplied will use the default depths in
+   ! -      level: The halo depth when the direction is not the ipencil one
+   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
    !               decomp_main.
    !---------------------------------------------------------------------
-   subroutine halo_exchange_complex_short(arr, ipencil, level)
+   subroutine halo_exchange_complex_short1(arr, ipencil, level)
+
       complex(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
@@ -541,22 +546,19 @@ contains
 
       integer, dimension(3) :: levels
 
+      ! Safety check
+      if (ipencil < 1 .or. ipencil > 3) then
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid argument")
+      end if
+
       levels(:) = level
       levels(ipencil) = 0
 
-      call halo_exchange(arr, ipencil, opt_levels=levels)
+      call halo_exchange(arr, ipencil, opt_levels = levels)
 
-   end subroutine halo_exchange_complex_short
+   end subroutine halo_exchange_complex_short1
 
-   !---------------------------------------------------------------------
-   ! Simplified interface for performing the halo data exchange.
-   ! -        arr: The halo array, local data is sent to neighbours, on return contains updated halo
-   !               entries.
-   ! -    ipencil: The pencil orientation.
-   ! - opt_levels: The per-axis halo depths to use, if not supplied will use the default depths in
-   !               decomp_main.
-   !---------------------------------------------------------------------
-   subroutine halo_exchange_complex_short_vec(arr, ipencil, opt_levels)
+   subroutine halo_exchange_complex_short3(arr, ipencil, opt_levels)
       complex(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
@@ -567,6 +569,11 @@ contains
       integer, dimension(3) :: levels
       integer, dimension(3) :: sizes
       type(halo_extents_t) :: halo_extents
+
+      ! Safety check
+      if (ipencil < 1 .or. ipencil > 3) then
+         call decomp_2d_abort(__FILE__, __LINE__, ipencil, "Invalid argument")
+      end if
 
       if (present(opt_levels)) then
          levels = opt_levels
@@ -589,7 +596,7 @@ contains
 
       call halo_exchange(arr, ipencil, halo_extents, levels, sizes)
 
-   end subroutine halo_exchange_complex_short_vec
+   end subroutine halo_exchange_complex_short3
 
    !---------------------------------------------------------------------
    ! Full interface for performing the halo data exchange.
