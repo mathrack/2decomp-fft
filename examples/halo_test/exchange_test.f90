@@ -324,6 +324,7 @@ contains
       call halo_exchange(vh, 1, halo_extents, [0, 1, 1], [s1, s2, s3])
       call halo_exchange(wh, 1, opt_levels=[0, 1, 1])
       call halo_exchange(wh, 1, [0, 1, 1])
+      call halo_exchange(wh, 1, opt_depth=1)
       call halo_exchange(wh, 1, 1)
 
       !$acc data copy(div1)
@@ -422,6 +423,7 @@ contains
       call halo_exchange(uh, 2, halo_extents, [1, 0, 1], [s1, s2, s3])
       call halo_exchange(wh, 2, opt_levels=[1, 0, 1])
       call halo_exchange(wh, 2, [1, 0, 1])
+      call halo_exchange(wh, 2, opt_depth=1)
       call halo_exchange(wh, 2, 1)
 
       !$acc data copy(div2)
