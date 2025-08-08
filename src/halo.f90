@@ -516,7 +516,7 @@ contains
    !---------------------------------------------------------------------
    subroutine halo_exchange_complex_short(arr, ipencil, opt_depth, opt_levels)
 
-      real(mytype), dimension(:, :, :), intent(inout) :: arr
+      complex(mytype), dimension(:, :, :), intent(inout) :: arr
 #if defined(_GPU)
       attributes(device) :: arr
 #endif
