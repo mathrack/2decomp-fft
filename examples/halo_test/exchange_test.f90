@@ -417,8 +417,8 @@ contains
 #endif
       jfirst = 2; jlast = ysize(2) - 1
 
-      call halo_exchange(uh, 2, opt_levels=[1, 0, 1])
-      call halo_exchange(wh, 2, opt_depth=1)
+      call halo_exchange(uh, 2, opt_depth=1)
+      call halo_exchange(wh, 2, opt_levels=[1, 0, 1])
 
       !$acc data copy(div2)
       !$acc kernels default(present)
@@ -513,8 +513,8 @@ contains
 #endif
       kfirst = 2; klast = zsize(3) - 1
 
-      call halo_exchange(uh, 3, opt_levels=[1, 1, 0])
-      call halo_exchange(vh, 3, opt_depth=1)
+      call halo_exchange(uh, 3, opt_depth=1)
+      call halo_exchange(vh, 3, opt_levels=[1, 1, 0])
 
       !$acc data copy(div3)
       !$acc kernels default(present)
