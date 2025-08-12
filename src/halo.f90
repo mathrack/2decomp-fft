@@ -479,9 +479,9 @@ contains
 #endif
 
       integer :: ipencil
+
       integer, dimension(3) :: levels
       integer, dimension(3) :: sizes
-
       integer :: s1, s2, s3
 
       integer, parameter :: data_type = real_type
