@@ -11,6 +11,8 @@ _e.g._ vX.Y - YYYY-MM-DD and a new "Unreleased" section started above.
 
 ### Added
 ### Fixed
+
+Fixed the calculations of the displacement for MPI_ALL_TO_ALLV communication to avoid issue with 03 optimisation with come compilers [PR #421](https://github.com/2decomp-fft/2decomp-fft/pull/421)
 ### Changed
 ### Deprecated
 ### Removed
