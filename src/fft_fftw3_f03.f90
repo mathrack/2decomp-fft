@@ -2234,11 +2234,7 @@ contains
          ifirst = dtt(4)
          ofirst = dtt(10)
       else
-         if (c_associated(dtt_plan(4))) then
-            plan = dtt_plan(4)
-         else
-            plan = dtt_plan(1)
-         end if
+         plan = dtt_plan(4)
          ifirst = dtt(10)
          ofirst = dtt(4)
       end if
@@ -2275,11 +2271,7 @@ contains
          ifirst = dtt(5)
          ofirst = dtt(11)
       else
-         if (c_associated(dtt_plan(5))) then
-            plan = dtt_plan(5)
-         else
-            plan = dtt_plan(2)
-         end if
+         plan = dtt_plan(5)
          ifirst = dtt(11)
          ofirst = dtt(5)
       end if
@@ -2318,11 +2310,7 @@ contains
          ifirst = dtt(6)
          ofirst = dtt(12)
       else
-         if (c_associated(dtt_plan(6))) then
-            plan = dtt_plan(6)
-         else
-            plan = dtt_plan(3)
-         end if
+         plan = dtt_plan(6)
          ifirst = dtt(12)
          ofirst = dtt(6)
       end if
