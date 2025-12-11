@@ -458,8 +458,8 @@ contains
          ! in y
          if (engine%dtt(2) == FFTW_FORWARD) then
             if (engine%dtt(1) == FFTW_FORWARD) then
-               call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_xy, engine%dtt(8))
-               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_xy, engine%dtt(8))
+               call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_xy, engine%dtt(8), FFTW_FORWARD)
+               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_xy, engine%dtt(8), FFTW_BACKWARD)
             else
                call r2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_xy, engine%dtt_decomp_yz, engine%dtt(8))
                call rr2r_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_yz, engine%dtt_decomp_xy, engine%dtt(8))
@@ -471,8 +471,8 @@ contains
          ! in z
          if (engine%dtt(3) == FFTW_FORWARD) then
             if (engine%dtt(1) == FFTW_FORWARD .or. engine%dtt(2) == FFTW_FORWARD) then
-               call rr2rr_1m_z_plan(engine%dtt_plan(3), engine%dtt_decomp_sp, engine%dtt(9))
-               call rr2rr_1m_z_plan(engine%dtt_plan(9), engine%dtt_decomp_sp, engine%dtt(9))
+               call rr2rr_1m_z_plan(engine%dtt_plan(3), engine%dtt_decomp_sp, engine%dtt(9), FFTW_FORWARD)
+               call rr2rr_1m_z_plan(engine%dtt_plan(9), engine%dtt_decomp_sp, engine%dtt(9), FFTW_BACKWARD)
             else
                call r2rr_1m_z_plan(engine%dtt_plan(3), engine%dtt_decomp_yz, engine%dtt_decomp_sp, engine%dtt(9))
                call rr2r_1m_z_plan(engine%dtt_plan(6), engine%dtt_decomp_sp, engine%dtt_decomp_yz, engine%dtt(9))
@@ -493,8 +493,8 @@ contains
          ! in y
          if (engine%dtt(2) == FFTW_FORWARD) then
             if (engine%dtt(3) == FFTW_FORWARD) then
-               call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_yz, engine%dtt(8))
-               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_yz, engine%dtt(8))
+               call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_yz, engine%dtt(8), FFTW_FORWARD)
+               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_yz, engine%dtt(8), FFTW_BACKWARD)
             else
                call r2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_yz, engine%dtt_decomp_xy, engine%dtt(8))
                call rr2r_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_xy, engine%dtt_decomp_yz, engine%dtt(8))
@@ -506,8 +506,8 @@ contains
          ! in x
          if (engine%dtt(1) == FFTW_FORWARD) then
             if (engine%dtt(2) == FFTW_FORWARD .or. engine%dtt(3) == FFTW_FORWARD) then
-               call rr2rr_1m_x_plan(engine%dtt_plan(1), engine%dtt_decomp_sp, engine%dtt(7))
-               call rr2rr_1m_x_plan(engine%dtt_plan(7), engine%dtt_decomp_sp, engine%dtt(7))
+               call rr2rr_1m_x_plan(engine%dtt_plan(1), engine%dtt_decomp_sp, engine%dtt(7), FFTW_FORWARD)
+               call rr2rr_1m_x_plan(engine%dtt_plan(7), engine%dtt_decomp_sp, engine%dtt(7), FFTW_BACKWARD)
             else
                call r2rr_1m_x_plan(engine%dtt_plan(1), engine%dtt_decomp_xy, engine%dtt_decomp_sp, engine%dtt(7))
                call rr2r_1m_x_plan(engine%dtt_plan(4), engine%dtt_decomp_sp, engine%dtt_decomp_xy, engine%dtt(7))
@@ -1375,13 +1375,13 @@ contains
    end subroutine c2r_1m_z_plan
 
    ! Return a FFTW3 plan for multiple 1D DTTs in X direction, with possibility to dismiss points
-   subroutine rr2rr_1m_x_plan(plan, decomp, ndismiss)
+   subroutine rr2rr_1m_x_plan(plan, decomp, ndismiss, isign)
 
       implicit none
 
       type(C_PTR), intent(out) :: plan
       TYPE(DECOMP_INFO), intent(in) :: decomp
-      integer, intent(in) :: ndismiss
+      integer, intent(in) :: ndismiss, isign
 
       ! Local variables
 #ifdef DOUBLE_PREC
@@ -1394,8 +1394,13 @@ contains
       real(C_FLOAT), contiguous, pointer :: a1(:, :, :), a2(:, :, :), a3(:, :, :), a4(:, :, :)
 #endif
 
-      call get_buffer_rr(a12, a1, a2, decomp%xsz, .true.)
-      call get_buffer_rr(a34, a3, a4, decomp%xsz, .true.)
+      if (isign == FFTW_FORWARD) then
+         call get_buffer_rr(a12, a1, a2, decomp%xsz, .true.)
+         call get_buffer_rr(a34, a3, a4, decomp%xsz, .true.)
+      else
+         call get_buffer_rr(a12, a2, a1, decomp%xsz, .true.)
+         call get_buffer_rr(a34, a4, a3, decomp%xsz, .true.)
+      end if
 
       dims(1)%n = decomp%xsz(1) - ndismiss
       dims(1)%is = 1
@@ -1417,13 +1422,13 @@ contains
    end subroutine rr2rr_1m_x_plan
 
    ! Return a FFTW3 plan for multiple 1D DTTs in Y direction, with possibility to dismiss points
-   subroutine rr2rr_1m_y_plan(plan, decomp, ndismiss)
+   subroutine rr2rr_1m_y_plan(plan, decomp, ndismiss, isign)
 
       implicit none
 
       type(C_PTR), intent(out) :: plan
       TYPE(DECOMP_INFO), intent(in) :: decomp
-      integer, intent(in) :: ndismiss
+      integer, intent(in) :: ndismiss, isign
 
       ! Local variables
 #ifdef DOUBLE_PREC
@@ -1436,8 +1441,13 @@ contains
       real(C_FLOAT), contiguous, pointer :: a1(:, :, :), a2(:, :, :), a3(:, :, :), a4(:, :, :)
 #endif
 
-      call get_buffer_rr(a12, a1, a2, decomp%ysz, .true.)
-      call get_buffer_rr(a34, a3, a4, decomp%ysz, .true.)
+      if (isign == FFTW_FORWARD) then
+         call get_buffer_rr(a12, a1, a2, decomp%ysz, .true.)
+         call get_buffer_rr(a34, a3, a4, decomp%ysz, .true.)
+      else
+         call get_buffer_rr(a12, a2, a1, decomp%ysz, .true.)
+         call get_buffer_rr(a34, a4, a3, decomp%ysz, .true.)
+      end if
 
       dims(1)%n = decomp%ysz(2) - ndismiss
       dims(1)%is = decomp%ysz(1)
@@ -1459,13 +1469,13 @@ contains
    end subroutine rr2rr_1m_y_plan
 
    ! Return a FFTW3 plan for multiple 1D DTTs in Z direction, with possibility to dismiss points
-   subroutine rr2rr_1m_z_plan(plan, decomp, ndismiss)
+   subroutine rr2rr_1m_z_plan(plan, decomp, ndismiss, isign)
 
       implicit none
 
       type(C_PTR), intent(out) :: plan
       TYPE(DECOMP_INFO), intent(in) :: decomp
-      integer, intent(in) :: ndismiss
+      integer, intent(in) :: ndismiss, isign
 
       ! Local variables
 #ifdef DOUBLE_PREC
@@ -1478,8 +1488,13 @@ contains
       real(C_FLOAT), contiguous, pointer :: a1(:, :, :), a2(:, :, :), a3(:, :, :), a4(:, :, :)
 #endif
 
-      call get_buffer_rr(a12, a1, a2, decomp%zsz, .true.)
-      call get_buffer_rr(a34, a3, a4, decomp%zsz, .true.)
+      if (isign == FFTW_FORWARD) then
+         call get_buffer_rr(a12, a1, a2, decomp%zsz, .true.)
+         call get_buffer_rr(a34, a3, a4, decomp%zsz, .true.)
+      else
+         call get_buffer_rr(a12, a2, a1, decomp%zsz, .true.)
+         call get_buffer_rr(a34, a4, a3, decomp%zsz, .true.)
+      end if
 
       dims(1)%n = decomp%zsz(3) - ndismiss
       dims(1)%is = decomp%zsz(1) * decomp%zsz(2)
