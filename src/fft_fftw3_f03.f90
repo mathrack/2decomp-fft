@@ -2124,12 +2124,12 @@ contains
       real(mytype), dimension(:, :, :), contiguous, target, intent(out) :: outr, outi
       integer, intent(in) :: isign
 
-      ! Copy for in-place transform
-!      outr = inr
-!      outi = ini
-
-      ! Exit if needed
-      if (skip_x_c2c) return
+      ! Copy and exit if needed
+      if (skip_x_c2c) then
+         outr = inr
+         outi = ini
+         return
+      end if
 
       ! Perform the DFT
       if (isign == DECOMP_2D_FFT_FORWARD) then
@@ -2156,12 +2156,12 @@ contains
       ! Local variable
       integer :: k
 
-      ! Copy for in-place transform
-!      outr = inr
-!      outi = ini
-
-      ! Exit if needed
-      if (skip_y_c2c) return
+      ! Copy and exit if needed
+      if (skip_y_c2c) then
+         outr = inr
+         outi = ini
+         return
+      end if
 
       ! Perform the DFT
       if (isign == DECOMP_2D_FFT_FORWARD) then
@@ -2189,12 +2189,12 @@ contains
       real(mytype), dimension(:, :, :), contiguous, target, intent(out) :: outr, outi
       integer, intent(in) :: isign
 
-      ! Copy for in-place transform
-!      outr = inr
-!      outi = ini
-
-      ! Exit if needed
-      if (skip_z_c2c) return
+      ! Copy and exit if needed
+      if (skip_z_c2c) then
+         outr = inr
+         outi = ini
+         return
+      end if
 
       ! Perform the DFT
       if (isign == DECOMP_2D_FFT_FORWARD) then
