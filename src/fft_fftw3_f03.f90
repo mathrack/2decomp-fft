@@ -2760,7 +2760,13 @@ contains
          call get_buffer_rr(wk3a, wk3ra, wk3ia, dtt_decomp_yz%zsz, cplx)
          ! z output buffers
          if (dtt_z_dft) cplx = .true.
-         if (cplx) call get_buffer_rr(wk3b, wk3rb, wk3ib, dtt_decomp_sp%zsz, cplx)
+         if (cplx) then
+            call get_buffer_rr(wk3b, wk3rb, wk3ib, dtt_decomp_sp%zsz, cplx)
+         else
+            nullify (wk3b)
+            nullify (wk3rb)
+            nullify (wk3ib)
+         end if
       else
          ! zy buffers
          nullify (wk3b)
@@ -2775,7 +2781,13 @@ contains
          call get_buffer_rr(wk1b, wk1rb, wk1ib, dtt_decomp_xy%xsz, cplx)
          ! x output buffers
          if (dtt_x_dft) cplx = .true.
-         if (cplx) call get_buffer_rr(wk1a, wk1ra, wk1ia, dtt_decomp_sp%xsz, cplx)
+         if (cplx) then
+            call get_buffer_rr(wk1a, wk1ra, wk1ia, dtt_decomp_sp%xsz, cplx)
+         else
+            nullify (wk1a)
+            nullify (wk1ra)
+            nullify (wk1ia)
+         end if
       end if
 
       ! Init
