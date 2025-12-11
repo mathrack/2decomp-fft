@@ -127,9 +127,9 @@ program dtt_x
 
             ! Perform forward and backward transform once
             ! Forward, real input, real output
-            call decomp_2d_dtt_3d_r2r(in_r, out_r, DECOMP_2D_FFT_FORWARD)
+            call decomp_2d_dtt_3d_r2x(in_r, out_r)
             ! Backward, real input, real output
-            call decomp_2d_dtt_3d_r2r(out_r, in_r, DECOMP_2D_FFT_BACKWARD)
+            call decomp_2d_dtt_3d_x2r(in_real=out_r, out=in_r)
 
             ! Rescale
             if (DTT(1, j, k, l) == 0) then
