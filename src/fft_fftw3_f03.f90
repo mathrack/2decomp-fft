@@ -86,7 +86,7 @@ module decomp_2d_fft
       ! Below is specific to DTT
       logical, public :: with_dtt
       integer, allocatable, public, dimension(:) :: dtt
-      type(C_PTR), private :: dtt_plan(9) ! (1:3) Forward (4:6) backward (7:9) backward rr2rr
+      type(C_PTR), private :: dtt_plan(6) ! (1:3) Forward (4:6) backward
       type(decomp_info), pointer, public :: dtt_decomp_sp => null()
       type(decomp_info), pointer, private :: dtt_decomp_xy => null(), &
                                              dtt_decomp_yz => null()
@@ -459,7 +459,7 @@ contains
          if (engine%dtt(2) == FFTW_FORWARD) then
             if (engine%dtt(1) == FFTW_FORWARD) then
                call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_xy, engine%dtt(8), FFTW_FORWARD)
-               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_xy, engine%dtt(8), FFTW_BACKWARD)
+               call rr2rr_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_xy, engine%dtt(8), FFTW_BACKWARD)
             else
                call r2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_xy, engine%dtt_decomp_yz, engine%dtt(8))
                call rr2r_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_yz, engine%dtt_decomp_xy, engine%dtt(8))
@@ -472,7 +472,7 @@ contains
          if (engine%dtt(3) == FFTW_FORWARD) then
             if (engine%dtt(1) == FFTW_FORWARD .or. engine%dtt(2) == FFTW_FORWARD) then
                call rr2rr_1m_z_plan(engine%dtt_plan(3), engine%dtt_decomp_sp, engine%dtt(9), FFTW_FORWARD)
-               call rr2rr_1m_z_plan(engine%dtt_plan(9), engine%dtt_decomp_sp, engine%dtt(9), FFTW_BACKWARD)
+               call rr2rr_1m_z_plan(engine%dtt_plan(6), engine%dtt_decomp_sp, engine%dtt(9), FFTW_BACKWARD)
             else
                call r2rr_1m_z_plan(engine%dtt_plan(3), engine%dtt_decomp_yz, engine%dtt_decomp_sp, engine%dtt(9))
                call rr2r_1m_z_plan(engine%dtt_plan(6), engine%dtt_decomp_sp, engine%dtt_decomp_yz, engine%dtt(9))
@@ -494,7 +494,7 @@ contains
          if (engine%dtt(2) == FFTW_FORWARD) then
             if (engine%dtt(3) == FFTW_FORWARD) then
                call rr2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_yz, engine%dtt(8), FFTW_FORWARD)
-               call rr2rr_1m_y_plan(engine%dtt_plan(8), engine%dtt_decomp_yz, engine%dtt(8), FFTW_BACKWARD)
+               call rr2rr_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_yz, engine%dtt(8), FFTW_BACKWARD)
             else
                call r2rr_1m_y_plan(engine%dtt_plan(2), engine%dtt_decomp_yz, engine%dtt_decomp_xy, engine%dtt(8))
                call rr2r_1m_y_plan(engine%dtt_plan(5), engine%dtt_decomp_xy, engine%dtt_decomp_yz, engine%dtt(8))
@@ -507,7 +507,7 @@ contains
          if (engine%dtt(1) == FFTW_FORWARD) then
             if (engine%dtt(2) == FFTW_FORWARD .or. engine%dtt(3) == FFTW_FORWARD) then
                call rr2rr_1m_x_plan(engine%dtt_plan(1), engine%dtt_decomp_sp, engine%dtt(7), FFTW_FORWARD)
-               call rr2rr_1m_x_plan(engine%dtt_plan(7), engine%dtt_decomp_sp, engine%dtt(7), FFTW_BACKWARD)
+               call rr2rr_1m_x_plan(engine%dtt_plan(4), engine%dtt_decomp_sp, engine%dtt(7), FFTW_BACKWARD)
             else
                call r2rr_1m_x_plan(engine%dtt_plan(1), engine%dtt_decomp_xy, engine%dtt_decomp_sp, engine%dtt(7))
                call rr2r_1m_x_plan(engine%dtt_plan(4), engine%dtt_decomp_sp, engine%dtt_decomp_xy, engine%dtt(7))
@@ -2137,7 +2137,7 @@ contains
                             inr, ini, size(inr), &
                             outr, outi, size(outr))
       else
-         call wrapper_rr2rr(dtt_plan(7), &
+         call wrapper_rr2rr(dtt_plan(4), &
                             ini, inr, size(inr), &
                             outi, outr, size(outr))
       end if
@@ -2172,7 +2172,7 @@ contains
          end do
       else
          do k = 1, size(inr, 3)
-            call wrapper_rr2rr(dtt_plan(8), &
+            call wrapper_rr2rr(dtt_plan(5), &
                                ini(:, :, k:k), inr(:, :, k:k), size(inr, 1) * size(inr, 2), &
                                outi(:, :, k:k), outr(:, :, k:k), size(outr, 1) * size(outr, 2))
          end do
@@ -2202,7 +2202,7 @@ contains
                             inr, ini, size(inr), &
                             outr, outi, size(outr))
       else
-         call wrapper_rr2rr(dtt_plan(9), &
+         call wrapper_rr2rr(dtt_plan(6), &
                             ini, inr, size(inr), &
                             outi, outr, size(outr))
       end if
