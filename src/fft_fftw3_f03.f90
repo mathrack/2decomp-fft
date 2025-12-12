@@ -357,6 +357,10 @@ contains
       class(decomp_2d_fft_engine), intent(inout), target :: engine
       integer, dimension(:), intent(in) :: in_DTT
 
+#ifdef EVEN
+      integer :: dims(2)
+#endif
+
       ! Safety check
       if (size(in_DTT) < 3) call decomp_2d_abort(__FILE__, __LINE__, size(in_DTT), "Invalid argument")
       if (minval(in_DTT(1:3)) < 0) call decomp_2d_abort(__FILE__, __LINE__, minval(in_DTT), "Invalid argument")
@@ -435,6 +439,15 @@ contains
             engine%dtt_decomp_xy => engine%ph
             engine%dtt_decomp_sp => engine%ph
          end if
+      end if
+
+      ! Resize the memory pool if needed
+      if (allocated(engine%dtt_decomp_sp_target%x1dist)) then
+         if (use_pool) call decomp_pool%new_shape(complex_type, engine%dtt_decomp_sp_target)
+#ifdef EVEN
+         dims = get_decomp_dims()
+         if (use_pool) call decomp_pool%new_shape(complex_type, shp=(/max(engine%dtt_decomp_sp_target%x1count * dims(1), engine%dtt_decomp_sp_target%y2count * dims(2))/))
+#endif
       end if
 
       ! Prepare the fftw plans
