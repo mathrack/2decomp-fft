@@ -3419,8 +3419,8 @@ contains
          buf1 = 0._mytype
 
          ! Pointers to null
-         if (associated(var)) nullify (var)
-         if (associated(buf2)) nullify (buf2)
+         nullify (var)
+         nullify (buf2)
 
       end if
 
